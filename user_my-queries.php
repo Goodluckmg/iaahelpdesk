@@ -9,6 +9,7 @@
 </head>
 <body>
 <div class="app-container">
+    <!-- SIDEBAR - USER VERSION (FIXED) -->
     <aside class="sidebar">
         <div class="profile-area">
             <div class="avatar"><i class="fas fa-user-graduate"></i></div>
@@ -17,18 +18,38 @@
             <div class="student-id"><i class="fas fa-id-card"></i> <span id="studentId">BCS-01-0131-2023</span></div>
         </div>
         <div class="nav-menu">
-            <a href="index.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
-            <a href="submit-query.php" class="nav-item active"><i class="fas fa-plus-circle"></i><span class="nav-label">Submit Query</span></a>
-            <a href="my-queries.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">My Queries</span></a>
-            <a href="knowledge-base.php" class="nav-item"><i class="fas fa-graduation-cap"></i><span class="nav-label">Knowledge Base</span></a>
-            <a href="feedback.php" class="nav-item"><i class="fas fa-star"></i><span class="nav-label">Feedback</span></a>
-            <a href="edit-photo.php" class="nav-item"> <i class="fas fa-camera"></i> <span class="nav-label">Edit Photo</span></a>
-            <a href="analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Analytics</span></a>
-            <a href="settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
-            <div class="logout-item"><a href="index.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <!-- Dashboard - NO active class (because this is Submit Query page) -->
+            <a href="user_index.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
+            
+            <!-- Submit Query - ACTIVE (this is the current page) -->
+            <a href="user_submit-query.php" class="nav-item active"><i class="fas fa-plus-circle"></i><span class="nav-label">Submit Query</span></a>
+            
+            <!-- My Queries -->
+            <a href="user_my-queries.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">My Queries</span></a>
+            
+            <!-- Knowledge Base -->
+            <a href="user_knowledge-base.php" class="nav-item"><i class="fas fa-graduation-cap"></i><span class="nav-label">Knowledge Base</span></a>
+            
+            <!-- Feedback -->
+            <a href="user_feedback.php" class="nav-item"><i class="fas fa-star"></i><span class="nav-label">Feedback</span></a>
+            
+            <!-- Edit Photo -->
+            <a href="user_edit-photo.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
+            
+            <!-- Startup Hub - NO active class -->
+            <a href="user_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
+            
+            <!-- Settings -->
+            <a href="user_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
+            
+            <!-- Logout -->
+            <div class="logout-item">
+                <a href="login.html" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a>
+            </div>
         </div>
     </aside>
 
+    <!-- MAIN CONTENT -->
     <main class="main-content">
         <div class="top-bar">
             <h1 class="page-title">Submit New Query</h1>
@@ -77,7 +98,7 @@
                     <textarea rows="5" id="qDesc" placeholder="Provide full details..."></textarea>
                 </div>
                 <div style="display:flex; gap:12px; justify-content:end;">
-                    <a href="index.php" class="btn-primary" style="background:#7f8c8d;">Cancel</a>
+                    <a href="user_index.php" class="btn-primary" style="background:#7f8c8d;">Cancel</a>
                     <button type="submit" class="btn-primary">Submit Query</button>
                 </div>
             </form>
@@ -87,11 +108,32 @@
 
 <script src="js/data.js"></script>
 <script>
+    // Set current date
+    function setCurrentDate() {
+        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+        const dateElement = document.getElementById('currentDate');
+        if (dateElement) {
+            dateElement.innerText = new Date().toLocaleDateString('en-US', options);
+        }
+    }
+    
     loadFromLocalStorage();
     initDemoData();
     setCurrentDate();
-    document.getElementById('userName').innerText = appData.currentUser.name;
-    document.getElementById('studentId').innerText = appData.currentUser.studentId;
+    
+    // Get user from session or appData
+    let loggedUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
+    if (loggedUser.name) {
+        document.getElementById('userName').innerText = loggedUser.name;
+    } else {
+        document.getElementById('userName').innerText = appData.currentUser.name;
+    }
+    
+    if (loggedUser.regNo) {
+        document.getElementById('studentId').innerText = loggedUser.regNo;
+    } else {
+        document.getElementById('studentId').innerText = appData.currentUser.studentId;
+    }
 
     document.getElementById('queryForm').addEventListener('submit', (e) => {
         e.preventDefault();
@@ -108,13 +150,15 @@
 
         addTicket(title, category, department, priority, description);
         showMessage('✅ Query submitted successfully!');
-        window.location.href = 'my-queries.html';
+        window.location.href = 'user_my-queries.php';
     });
 
     document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
         e.preventDefault();
+        sessionStorage.clear();
         localStorage.clear();
-        window.location.href = 'index.php';
+        showMessage('Logged out successfully!');
+        window.location.href = 'login.html';
     });
 </script>
 </body>

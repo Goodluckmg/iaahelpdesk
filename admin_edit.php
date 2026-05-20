@@ -3,9 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IAA Student Helpdesk | Edit Profile Photo</title>
+    <title>IAA Helpdesk | Admin - Edit Profile Photo</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="css/admin.css">
     <style>
         /* Additional styles specific to edit photo page */
         .edit-photo-wrapper {
@@ -70,7 +70,7 @@
             margin: 0 auto;
             border-radius: 50%;
             overflow: hidden;
-            border: 4px solid #2c7da0;
+            border: 4px solid #e74c3c;
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
         }
 
@@ -106,7 +106,7 @@
 
         .upload-icon {
             font-size: 48px;
-            color: #2c7da0;
+            color: #e74c3c;
             margin-bottom: 15px;
         }
 
@@ -118,7 +118,7 @@
 
         .upload-requirements i {
             margin-right: 5px;
-            color: #2c7da0;
+            color: #e74c3c;
         }
 
         .file-input-area {
@@ -126,7 +126,7 @@
         }
 
         .custom-file-label {
-            background: #2c7da0;
+            background: #e74c3c;
             color: white;
             padding: 10px 24px;
             border-radius: 30px;
@@ -140,13 +140,13 @@
         }
 
         .custom-file-label:hover {
-            background: #1f5a70;
+            background: #c0392b;
             transform: translateY(-2px);
         }
 
         .selected-file-name {
             font-size: 0.75rem;
-            color: #2c7da0;
+            color: #e74c3c;
             margin-top: 10px;
         }
 
@@ -169,7 +169,7 @@
 
         .save-photo-btn {
             width: 100%;
-            background: linear-gradient(135deg, #2c7da0, #1f5068);
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
             border: none;
             padding: 14px;
             border-radius: 40px;
@@ -185,7 +185,7 @@
         }
 
         .save-photo-btn:hover {
-            background: linear-gradient(135deg, #1f5a70, #143d4d);
+            background: linear-gradient(135deg, #c0392b, #a93226);
             transform: translateY(-2px);
             box-shadow: 0 5px 15px rgba(0,0,0,0.2);
         }
@@ -247,46 +247,58 @@
 </head>
 <body>
 <div class="app-container">
-    <!-- SIDEBAR -->
+    <!-- SIDEBAR - ADMIN VERSION (FIXED) -->
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-graduate"></i></div>
+            <div class="avatar"><i class="fas fa-user-shield"></i></div>
             <div class="welcome-text">Welcome,</div>
-            <div class="student-name" id="userName">Goodluck</div>
-            <div class="student-id"><i class="fas fa-id-card"></i> <span id="studentId">BCS-01-0131-2023</span></div>
+            <div class="user-name" id="adminName">Administrator</div>
+            <div class="user-role">⚙️ Super Admin</div>
+            <div class="user-id" id="adminId">ADMIN/001</div>
         </div>
         <div class="nav-menu">
-            <a href="index.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
-            <a href="submit-query.php" class="nav-item"><i class="fas fa-plus-circle"></i><span class="nav-label">Submit Query</span></a>
-            <a href="my-queries.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">My Queries</span></a>
-            <a href="knowledge-base.php" class="nav-item"><i class="fas fa-graduation-cap"></i><span class="nav-label">Knowledge Base</span></a>
-            <a href="feedback.php" class="nav-item"><i class="fas fa-star"></i><span class="nav-label">Feedback</span></a>
-            <a href="edit-photo.php" class="nav-item active"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
-            <a href="analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Analytics</span></a>
-            <a href="settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
-            <div class="logout-item"><a href="login.html" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <a href="admin.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
+            <a href="admin_users_management.php" class="nav-item"><i class="fas fa-users"></i><span class="nav-label">User Management</span></a>
+            <a href="admin_tickets_view.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">All Tickets</span></a>
+            <a href="admin_departments.php" class="nav-item"><i class="fas fa-building"></i><span class="nav-label">Departments</span></a>
+            <a href="admin_edit.php" class="nav-item active"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
+            <a href="admin_analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Analytics</span></a>
+            <a href="admin_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">System Settings</span></a>
+            <div class="logout-item"><a href="../login.html" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 
     <!-- MAIN CONTENT -->
     <main class="main-content">
         <div class="top-bar">
-            <h1 class="page-title">Edit Profile Photo | IAA Helpdesk</h1>
+            <h1 class="page-title">Edit Profile Photo | Admin</h1>
             <div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
         </div>
 
         <!-- Edit Photo Content -->
         <div class="edit-photo-wrapper">
-            <!-- User Info Section -->
+            <!-- Admin Info Section -->
             <div class="user-info-card">
                 <div class="welcome-badge">
-                    <i class="fas fa-smile"></i> Welcome
-             
-            
-                 
+                    <i class="fas fa-smile"></i> Admin Profile
+                </div>
+                <div class="user-fullname" id="displayAdminName">Administrator</div>
+                <div class="user-reg-number" id="displayAdminId">ADMIN/001</div>
             </div>
 
-        
+            <!-- Photo Preview -->
+            <div class="photo-preview-card">
+                <div class="photo-preview-label"><i class="fas fa-image"></i> Current Profile Photo</div>
+                <div class="photo-circle-preview">
+                    <img src="https://ui-avatars.com/api/?background=e74c3c&color=fff&size=150&name=Admin" alt="Profile Photo" id="previewImage">
+                </div>
+            </div>
+
+            <!-- ISMS Requirement -->
+            <div class="isms-info">
+                <i class="fas fa-shield-alt"></i> ISMS / Required format PNG, JPG & JPEG Only (size less than 1 MB)
+            </div>
+
             <!-- File Upload Section -->
             <div class="upload-card">
                 <div class="upload-icon">
@@ -338,43 +350,43 @@
     const saveBtn = document.getElementById('savePhotoBtn');
     const errorMessageDiv = document.getElementById('errorMessage');
     const errorText = document.getElementById('errorText');
-    const displayUserName = document.getElementById('displayUserName');
-    const displayUserReg = document.getElementById('displayUserReg');
-    const sidebarUserName = document.getElementById('userName');
-    const sidebarStudentId = document.getElementById('studentId');
+    const displayAdminName = document.getElementById('displayAdminName');
+    const displayAdminId = document.getElementById('displayAdminId');
+    const sidebarAdminName = document.getElementById('adminName');
+    const sidebarAdminId = document.getElementById('adminId');
     
-    // Get current user from session storage
-    let currentUser = {};
-    let currentRegNo = 'IAA/2024/0789';
-    let currentUserName = 'Goodluck';
+    // Get current admin from session storage
+    let currentAdmin = {};
+    let currentAdminRegNo = 'ADMIN/001';
+    let currentAdminName = 'Administrator';
     let selectedFileData = null;
     
     try {
         const storedUser = sessionStorage.getItem('loggedInUser');
         if (storedUser) {
-            currentUser = JSON.parse(storedUser);
-            currentRegNo = currentUser.regNo || 'BCS-01-0131-2023';
-            currentUserName = currentUser.name || 'Goodluck';
+            currentAdmin = JSON.parse(storedUser);
+            currentAdminRegNo = currentAdmin.regNo || 'ADMIN/001';
+            currentAdminName = currentAdmin.name || 'Administrator';
         }
     } catch(e) {
-        console.log('Using default user');
+        console.log('Using default admin');
     }
     
-    // Update displayed user info
-    if (displayUserName) displayUserName.textContent = currentUserName;
-    if (displayUserReg) displayUserReg.textContent = currentRegNo;
-    if (sidebarUserName) sidebarUserName.textContent = currentUserName;
-    if (sidebarStudentId) sidebarStudentId.textContent = currentRegNo;
+    // Update displayed admin info
+    if (displayAdminName) displayAdminName.textContent = currentAdminName;
+    if (displayAdminId) displayAdminId.textContent = currentAdminRegNo;
+    if (sidebarAdminName) sidebarAdminName.textContent = currentAdminName;
+    if (sidebarAdminId) sidebarAdminId.textContent = currentAdminRegNo;
     
     // Load saved profile photo
     function loadSavedProfilePhoto() {
         try {
-            const savedPhoto = localStorage.getItem('profilePhoto_' + currentRegNo);
+            const savedPhoto = localStorage.getItem('admin_profilePhoto_' + currentAdminRegNo);
             if (savedPhoto && savedPhoto !== 'null' && savedPhoto !== 'undefined') {
                 previewImage.src = savedPhoto;
             } else {
-                const firstName = currentUserName.split(' ')[0] || 'User';
-                previewImage.src = 'https://ui-avatars.com/api/?background=2c7da0&color=fff&size=150&name=' + encodeURIComponent(firstName);
+                const firstName = currentAdminName.split(' ')[0] || 'Admin';
+                previewImage.src = 'https://ui-avatars.com/api/?background=e74c3c&color=fff&size=150&name=' + encodeURIComponent(firstName);
             }
         } catch(e) {
             console.log('Error loading photo:', e);
@@ -487,7 +499,8 @@
         }
         
         try {
-            localStorage.setItem('profilePhoto_' + currentRegNo, selectedFileData);
+            // Use admin specific key in localStorage
+            localStorage.setItem('admin_profilePhoto_' + currentAdminRegNo, selectedFileData);
             
             if (sessionStorage.getItem('loggedInUser')) {
                 const userData = JSON.parse(sessionStorage.getItem('loggedInUser'));

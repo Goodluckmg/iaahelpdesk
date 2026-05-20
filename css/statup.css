@@ -1,0 +1,500 @@
+/* ============================================
+   STARTUP HUB CSS - IAA Student Helpdesk
+   ============================================ */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+body {
+    background: #f0f2f8;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.app-container {
+    display: flex;
+    height: 100vh;
+    width: 100%;
+}
+
+/* ========= SIDEBAR STYLES ========= */
+.sidebar {
+    width: 280px;
+    background: #0a1c2a;
+    color: #e0edf5;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 4px 0 15px rgba(0,0,0,0.1);
+    overflow-y: auto;
+}
+
+.profile-area {
+    padding: 25px 20px;
+    border-bottom: 1px solid #1a3a48;
+    text-align: center;
+    background: #0d2232;
+}
+
+.avatar {
+    width: 70px;
+    height: 70px;
+    background: linear-gradient(135deg, #2c7da0, #1f5068);
+    border-radius: 50%;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 3px solid rgba(255,255,255,0.2);
+}
+
+.avatar i {
+    font-size: 35px;
+    color: white;
+}
+
+.welcome-text {
+    font-size: 0.75rem;
+    color: #bdd9e8;
+}
+
+.student-name {
+    font-size: 1.2rem;
+    font-weight: 700;
+    color: white;
+    margin: 4px 0;
+}
+
+.student-id {
+    font-size: 0.7rem;
+    color: #8aaec0;
+    margin-top: 5px;
+    background: rgba(255,255,255,0.1);
+    display: inline-block;
+    padding: 4px 12px;
+    border-radius: 20px;
+}
+
+.nav-menu {
+    flex: 1;
+    padding: 15px;
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 15px;
+    border-radius: 10px;
+    font-weight: 500;
+    color: #cbdbe6;
+    transition: 0.2s;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.nav-item i {
+    width: 22px;
+    font-size: 1rem;
+}
+
+.nav-label {
+    font-size: 0.85rem;
+}
+
+.nav-item.active {
+    background: #2c7da0;
+    color: white;
+}
+
+.nav-item:hover:not(.active) {
+    background: #1a3a48;
+    color: white;
+}
+
+.logout-item {
+    margin-top: auto;
+    border-top: 1px solid #1a3a48;
+    padding-top: 15px;
+}
+
+/* ========= MAIN CONTENT ========= */
+.main-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 20px 25px;
+    background: #f8fafc;
+}
+
+.top-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+}
+
+.page-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #0a2b38;
+}
+
+.date-badge {
+    background: white;
+    padding: 6px 16px;
+    border-radius: 30px;
+    font-size: 0.75rem;
+    border: 1px solid #dee9f0;
+}
+
+/* ========= NOTIFICATION BADGE ========= */
+.notification-badge {
+    position: relative;
+    cursor: pointer;
+}
+
+.badge-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    background: #e74c3c;
+    color: white;
+    font-size: 10px;
+    padding: 2px 6px;
+    border-radius: 50%;
+}
+
+/* ========= TABS ========= */
+.startup-tabs {
+    display: flex;
+    gap: 5px;
+    margin-bottom: 25px;
+    background: white;
+    padding: 5px;
+    border-radius: 15px;
+    border: 1px solid #e2edf2;
+}
+
+.tab-btn {
+    flex: 1;
+    padding: 12px;
+    border: none;
+    background: transparent;
+    border-radius: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: 0.3s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.tab-btn.active {
+    background: #2c7da0;
+    color: white;
+}
+
+.tab-btn:hover:not(.active) {
+    background: #e8f0f5;
+}
+
+/* ========= CARDS ========= */
+.opportunity-card, .idea-card {
+    background: white;
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 15px;
+    border: 1px solid #e2edf2;
+    transition: 0.3s;
+}
+
+.opportunity-card:hover, .idea-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 5px 15px rgba(0,0,0,0.05);
+}
+
+.card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 10px;
+}
+
+.card-type {
+    background: #e0f0f5;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+    font-weight: 600;
+}
+
+.card-type.job {
+    background: #d9f0e5;
+    color: #1d6f42;
+}
+
+.card-type.training {
+    background: #fff3e0;
+    color: #b45f06;
+}
+
+.card-type.opportunity {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.card-title {
+    font-size: 1rem;
+    font-weight: 700;
+    color: #0a2b38;
+    margin-bottom: 8px;
+}
+
+.card-desc {
+    font-size: 0.8rem;
+    color: #7f8c8d;
+    margin-bottom: 12px;
+}
+
+.card-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.7rem;
+    color: #94a3b8;
+}
+
+.apply-btn {
+    background: #2c7da0;
+    color: white;
+    border: none;
+    padding: 6px 16px;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 0.7rem;
+    transition: 0.3s;
+}
+
+.apply-btn:hover {
+    background: #1f5a70;
+}
+
+/* ========= FORM STYLES ========= */
+.idea-form {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    margin-bottom: 25px;
+    border: 1px solid #e2edf2;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    font-weight: 600;
+    display: block;
+    margin-bottom: 5px;
+    font-size: 0.8rem;
+}
+
+.form-group input, .form-group select, .form-group textarea {
+    width: 100%;
+    padding: 10px 14px;
+    border-radius: 12px;
+    border: 1px solid #cbdbe6;
+    outline: none;
+    font-size: 0.85rem;
+}
+
+.form-group input:focus, .form-group select:focus, .form-group textarea:focus {
+    border-color: #2c7da0;
+    box-shadow: 0 0 0 3px rgba(44,125,160,0.1);
+}
+
+.submit-btn {
+    background: #2c7da0;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 30px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: 0.3s;
+}
+
+.submit-btn:hover {
+    background: #1f5a70;
+    transform: translateY(-2px);
+}
+
+/* ========= ADVISORY SECTION ========= */
+.advisory-section {
+    background: linear-gradient(135deg, #0d2232, #0a1c2a);
+    border-radius: 20px;
+    padding: 25px;
+    color: white;
+    margin-top: 20px;
+}
+
+.advisor-card {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    background: rgba(255,255,255,0.1);
+    padding: 15px;
+    border-radius: 15px;
+    margin-top: 15px;
+}
+
+.advisor-icon {
+    width: 50px;
+    height: 50px;
+    background: #2c7da0;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.advisor-icon i {
+    font-size: 24px;
+    color: white;
+}
+
+.advisor-info h4 {
+    font-size: 1rem;
+    margin-bottom: 3px;
+}
+
+.advisor-info p {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+.contact-advisor {
+    background: #2c7da0;
+    border: none;
+    padding: 5px 12px;
+    border-radius: 20px;
+    color: white;
+    cursor: pointer;
+    font-size: 0.7rem;
+    margin-left: auto;
+    transition: 0.3s;
+}
+
+.contact-advisor:hover {
+    background: #1f5a70;
+}
+
+/* ========= MODAL ========= */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    border-radius: 20px;
+    padding: 25px;
+    max-width: 400px;
+    width: 90%;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.notification-item {
+    padding: 12px;
+    border-bottom: 1px solid #e2edf2;
+    cursor: pointer;
+    border-radius: 10px;
+}
+
+.notification-item:hover {
+    background: #f8fafc;
+}
+
+.notification-item.unread {
+    background: #e3f2fd;
+}
+
+/* ========= UTILITY ========= */
+.hidden {
+    display: none;
+}
+
+.status-badge {
+    background: #fff3e0;
+    padding: 2px 8px;
+    border-radius: 20px;
+    font-size: 0.7rem;
+}
+
+/* ========= RESPONSIVE ========= */
+@media (max-width: 768px) {
+    .sidebar {
+        width: 240px;
+    }
+    .startup-tabs {
+        flex-wrap: wrap;
+    }
+    .tab-btn {
+        font-size: 0.7rem;
+        padding: 8px;
+    }
+    .page-title {
+        font-size: 1.3rem;
+    }
+    .advisor-card {
+        flex-wrap: wrap;
+    }
+    .contact-advisor {
+        margin-left: 0;
+        width: 100%;
+        margin-top: 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-footer {
+        flex-direction: column;
+        gap: 10px;
+        align-items: flex-start;
+    }
+    .apply-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+/* ========= SCROLLBAR ========= */
+::-webkit-scrollbar {
+    width: 6px;
+}
+
+::-webkit-scrollbar-track {
+    background: #e2edf2;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #2c7da0;
+    border-radius: 10px;
+}
