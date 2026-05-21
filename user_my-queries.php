@@ -3,13 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IAA Student Helpdesk | Submit Query</title>
+    <title>IAA Student Helpdesk | My Queries</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="app-container">
-    <!-- SIDEBAR - USER VERSION (FIXED) -->
     <aside class="sidebar">
         <div class="profile-area">
             <div class="avatar"><i class="fas fa-user-graduate"></i></div>
@@ -18,148 +17,66 @@
             <div class="student-id"><i class="fas fa-id-card"></i> <span id="studentId">BCS-01-0131-2023</span></div>
         </div>
         <div class="nav-menu">
-            <!-- Dashboard - NO active class (because this is Submit Query page) -->
             <a href="user_index.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
-            
-            <!-- Submit Query - ACTIVE (this is the current page) -->
-            <a href="user_submit-query.php" class="nav-item active"><i class="fas fa-plus-circle"></i><span class="nav-label">Submit Query</span></a>
-            
-            <!-- My Queries -->
-            <a href="user_my-queries.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">My Queries</span></a>
-            
-            <!-- Knowledge Base -->
+            <a href="user_submit-query.php" class="nav-item"><i class="fas fa-plus-circle"></i><span class="nav-label">Submit Query</span></a>
+            <a href="user_my-queries.php" class="nav-item active"><i class="fas fa-ticket-alt"></i><span class="nav-label">My Queries</span></a>
             <a href="user_knowledge-base.php" class="nav-item"><i class="fas fa-graduation-cap"></i><span class="nav-label">Knowledge Base</span></a>
-            
-            <!-- Feedback -->
             <a href="user_feedback.php" class="nav-item"><i class="fas fa-star"></i><span class="nav-label">Feedback</span></a>
-            
-            <!-- Edit Photo -->
             <a href="user_edit-photo.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
-            
-            <!-- Startup Hub - NO active class -->
             <a href="user_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
-            
-            <!-- Settings -->
             <a href="user_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
-            
-            <!-- Logout -->
-            <div class="logout-item">
-                <a href="login.html" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a>
-            </div>
+            <div class="logout-item"><a href="login.html" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 
-    <!-- MAIN CONTENT -->
     <main class="main-content">
-        <div class="top-bar">
-            <h1 class="page-title">Submit New Query</h1>
-            <div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
-        </div>
-
+        <div class="top-bar"><h1 class="page-title">My Queries & Tracking</h1><div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div></div>
         <div class="widget-card">
-            <div class="flex-between"><strong>📝 Submit a new query – IAA Helpdesk</strong></div>
-            <form id="queryForm">
-                <div class="form-group">
-                    <label>Query Title *</label>
-                    <input type="text" id="qTitle" placeholder="e.g., Missing examination CSC 101" required>
-                </div>
-                <div class="form-group">
-                    <label>Category</label>
-                    <select id="qCategory">
-                        <option>Examination issues</option>
-                        <option>Fee-related query</option>
-                        <option>Portal login problem</option>
-                        <option>Course registration error</option>
-                        <option>Academic documents</option>
-                        <option>Other</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Department</label>
-                    <select id="qDept">
-                        <option>Examination & Records</option>
-                        <option>Finance Office</option>
-                        <option>ICT Support</option>
-                        <option>Academic Registry</option>
-                        <option>Dean of Students</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Priority</label>
-                    <select id="qPriority">
-                        <option>Low</option>
-                        <option>Medium</option>
-                        <option>High</option>
-                        <option>Urgent</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>Description *</label>
-                    <textarea rows="5" id="qDesc" placeholder="Provide full details..."></textarea>
-                </div>
-                <div style="display:flex; gap:12px; justify-content:end;">
-                    <a href="user_index.php" class="btn-primary" style="background:#7f8c8d;">Cancel</a>
-                    <button type="submit" class="btn-primary">Submit Query</button>
-                </div>
-            </form>
+            <div class="flex-between"><strong>📌 All my submitted tickets</strong><button id="refreshBtn" class="btn-primary"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+            <div id="queriesListContainer"></div>
         </div>
     </main>
 </div>
 
 <script src="js/data.js"></script>
 <script>
-    // Set current date
     function setCurrentDate() {
         const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
         const dateElement = document.getElementById('currentDate');
-        if (dateElement) {
-            dateElement.innerText = new Date().toLocaleDateString('en-US', options);
-        }
+        if (dateElement) dateElement.innerText = new Date().toLocaleDateString('en-US', options);
     }
     
+    function renderMyQueries() {
+        const allTickets = getAllTickets();
+        const container = document.getElementById('queriesListContainer');
+        if (allTickets.length === 0) {
+            container.innerHTML = '<div class="ticket-item">No submitted queries yet. <a href="user_submit-query.php">Submit your first query</a></div>';
+            return;
+        }
+        container.innerHTML = allTickets.map(t => `
+            <div class="ticket-item">
+                <div style="display:flex; justify-content:space-between;"><strong>#${t.id} - ${escapeHtml(t.title)}</strong><span class="status-badge ${t.status === 'Resolved' ? 'status-resolved' : ''}">${t.status}</span></div>
+                <div style="margin: 8px 0;"><small><i class="fas fa-building"></i> ${t.department} | 🔥 ${t.priority} | 📅 ${t.date}</small></div>
+                <p>${escapeHtml(t.description.substring(0, 120))}${t.description.length > 120 ? '...' : ''}</p>
+                ${t.status !== 'Resolved' ? `<button class="resolve-btn" data-id="${t.id}" style="background:#1a6e4b; border:none; color:white; padding:5px 14px; border-radius:30px; margin-top:8px; cursor:pointer;">✓ Mark as Resolved</button>` : (t.rating ? `<div><i class="fas fa-star" style="color:#f5b042;"></i> Rated: ${t.rating}/5</div>` : `<div class="rating-container" data-id="${t.id}" style="margin-top:8px;">⭐ Rate resolution: <span class="star" data-rate="1" style="cursor:pointer;">★</span><span class="star" data-rate="2" style="cursor:pointer;">★</span><span class="star" data-rate="3" style="cursor:pointer;">★</span><span class="star" data-rate="4" style="cursor:pointer;">★</span><span class="star" data-rate="5" style="cursor:pointer;">★</span></div>`)}
+            </div>
+        `).join('');
+        
+        document.querySelectorAll('.resolve-btn').forEach(btn => btn.addEventListener('click', () => { updateTicketStatus(parseInt(btn.dataset.id), 'Resolved'); showMessage('✅ Ticket marked as resolved!'); renderMyQueries(); }));
+        document.querySelectorAll('.rating-container').forEach(container => { const ticketId = parseInt(container.dataset.id); container.querySelectorAll('.star').forEach(star => star.addEventListener('click', () => { addRating(ticketId, parseInt(star.dataset.rate)); showMessage(`⭐ Rated! Thanks for your feedback.`); renderMyQueries(); })); });
+    }
+
     loadFromLocalStorage();
     initDemoData();
     setCurrentDate();
     
-    // Get user from session or appData
     let loggedUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
-    if (loggedUser.name) {
-        document.getElementById('userName').innerText = loggedUser.name;
-    } else {
-        document.getElementById('userName').innerText = appData.currentUser.name;
-    }
-    
-    if (loggedUser.regNo) {
-        document.getElementById('studentId').innerText = loggedUser.regNo;
-    } else {
-        document.getElementById('studentId').innerText = appData.currentUser.studentId;
-    }
+    document.getElementById('userName').innerText = loggedUser.name || appData.currentUser.name;
+    document.getElementById('studentId').innerText = loggedUser.regNo || appData.currentUser.studentId;
+    renderMyQueries();
 
-    document.getElementById('queryForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const title = document.getElementById('qTitle').value;
-        const category = document.getElementById('qCategory').value;
-        const department = document.getElementById('qDept').value;
-        const priority = document.getElementById('qPriority').value;
-        const description = document.getElementById('qDesc').value;
-
-        if (!title || !description) {
-            showMessage('Please fill title and description');
-            return;
-        }
-
-        addTicket(title, category, department, priority, description);
-        showMessage('✅ Query submitted successfully!');
-        window.location.href = 'user_my-queries.php';
-    });
-
-    document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        sessionStorage.clear();
-        localStorage.clear();
-        showMessage('Logged out successfully!');
-        window.location.href = 'login.html';
-    });
+    document.getElementById('refreshBtn').addEventListener('click', () => renderMyQueries());
+    document.getElementById('logoutBtn')?.addEventListener('click', (e) => { e.preventDefault(); sessionStorage.clear(); localStorage.clear(); window.location.href = 'login.html'; });
 </script>
 </body>
 </html>

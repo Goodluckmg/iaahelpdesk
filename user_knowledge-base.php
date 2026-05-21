@@ -17,25 +17,20 @@
             <div class="student-id"><i class="fas fa-id-card"></i> <span id="studentId">BCS-01-0131-2023</span></div>
         </div>
         <div class="nav-menu">
-             <a href="user_index.php" class="nav-item active"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
+            <a href="user_index.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
             <a href="user_submit-query.php" class="nav-item"><i class="fas fa-plus-circle"></i><span class="nav-label">Submit Query</span></a>
             <a href="user_my-queries.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">My Queries</span></a>
-            <a href="user_knowledge-base.php" class="nav-item"><i class="fas fa-graduation-cap"></i><span class="nav-label">Knowledge Base</span></a>
+            <a href="user_knowledge-base.php" class="nav-item active"><i class="fas fa-graduation-cap"></i><span class="nav-label">Knowledge Base</span></a>
             <a href="user_feedback.php" class="nav-item"><i class="fas fa-star"></i><span class="nav-label">Feedback</span></a>
-            <a href="user_edit-photo.php" class="nav-item"> <i class="fas fa-camera"></i> <span class="nav-label">Edit Photo</span></a>
-            <a href="user_startup.php" class="nav-item active"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
-            <a href="user_analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Analytics</span></a>
+            <a href="user_edit-photo.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
+            <a href="user_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
             <a href="user_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
-            <div class="logout-item"><a href="index.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <div class="logout-item"><a href="login.html" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 
     <main class="main-content">
-        <div class="top-bar">
-            <h1 class="page-title">Knowledge Base & FAQs</h1>
-            <div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
-        </div>
-
+        <div class="top-bar"><h1 class="page-title">Knowledge Base & FAQs</h1><div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div></div>
         <div class="widget-card">
             <div class="flex-between"><strong>📖 IAA Knowledge Base</strong></div>
             <ul class="kb-list">
@@ -47,27 +42,28 @@
                 <li><i class="fas fa-check-circle"></i> <strong>Library book renewal:</strong> – Can be done online via library portal.</li>
             </ul>
             <hr>
-            <p><i class="fas fa-headset"></i> Still have questions? <a href="submit-query.html">Submit a query</a> for personalized support.</p>
-            <div style="margin-top: 20px; background: #e8f0f5; padding: 15px; border-radius: 20px;">
-                <i class="fas fa-phone-alt"></i> <strong>ICT Support Hotline:</strong> +255 712 345 678<br>
-                <i class="fas fa-envelope"></i> <strong>Email:</strong> helpdesk@iaa.ac.tz
-            </div>
+            <p><i class="fas fa-headset"></i> Still have questions? <a href="user_submit-query.php">Submit a query</a> for personalized support.</p>
+            <div style="margin-top: 20px; background: #e8f0f5; padding: 15px; border-radius: 20px;"><i class="fas fa-phone-alt"></i> <strong>ICT Support Hotline:</strong> +255 712 345 678<br><i class="fas fa-envelope"></i> <strong>Email:</strong> helpdesk@iaa.ac.tz</div>
         </div>
     </main>
 </div>
 
 <script src="js/data.js"></script>
 <script>
+    function setCurrentDate() {
+        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+        const dateElement = document.getElementById('currentDate');
+        if (dateElement) dateElement.innerText = new Date().toLocaleDateString('en-US', options);
+    }
+    
     loadFromLocalStorage();
     setCurrentDate();
-    document.getElementById('userName').innerText = appData.currentUser.name;
-    document.getElementById('studentId').innerText = appData.currentUser.studentId;
+    
+    let loggedUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
+    document.getElementById('userName').innerText = loggedUser.name || appData.currentUser.name;
+    document.getElementById('studentId').innerText = loggedUser.regNo || appData.currentUser.studentId;
 
-    document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        localStorage.clear();
-        window.location.href = 'index.html';
-    });
+    document.getElementById('logoutBtn')?.addEventListener('click', (e) => { e.preventDefault(); sessionStorage.clear(); localStorage.clear(); window.location.href = 'login.html'; });
 </script>
 </body>
 </html>
