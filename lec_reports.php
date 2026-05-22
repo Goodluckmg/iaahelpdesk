@@ -23,7 +23,7 @@
             <a href="lec_pending.php" class="nav-item" data-view="pending"><i class="fas fa-clock"></i><span class="nav-label">Pending Requests</span></a>
             <a href="lec_reports.php" class="nav-item" data-view="resolved"><i class="fas fa-check-circle"></i><span class="nav-label">Resolved</span></a>
             <a href="lec_courses.php" class="nav-item" data-view="courses"><i class="fas fa-book"></i><span class="nav-label">My Courses</span></a>
-            <a href="lec_reports.php" class="nav-item" data-view="reports"><i class="fas fa-chart-line"></i><span class="nav-label">Reports</span></a>
+            <a href="lec_reports.php" class="nav-item active" data-view="reports"><i class="fas fa-chart-line"></i><span class="nav-label">Reports</span></a>
             <div class="logout-item"><a href="../login.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>

@@ -3,164 +3,77 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IAA Helpdesk | Student Accounts</title>
+    <title>IAA Helpdesk | Student Verification</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/finance.css">
+    <style>
+        .student-card { background: white; border-radius: 16px; padding: 15px; margin-bottom: 12px; border: 1px solid #e2edf2; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
+        .student-info h4 { margin-bottom: 5px; color: #0a2b38; }
+        .student-info p { font-size: 0.75rem; color: #7f8c8d; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
+        .status-verified { background: #d9f0e5; color: #1d6f42; }
+        .status-pending { background: #fff3e0; color: #b45f06; }
+        .btn-verify { background: #27ae60; color: white; border: none; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; }
+        .btn-verify:hover { background: #1e8449; }
+        .search-section { margin-bottom: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+        .search-input { flex: 1; padding: 10px; border: 1px solid #cbdbe6; border-radius: 12px; }
+    </style>
 </head>
 <body>
 <div class="app-container">
     <aside class="sidebar">
-        <div class="profile-area">
-            <div class="avatar"><i class="fas fa-coins"></i></div>
-            <div class="welcome-text">Welcome,</div>
-            <div class="user-name" id="financeName">Mr. James Peter</div>
-            <div class="user-role">💰 Finance Office</div>
-            <div class="user-id" id="financeId">FIN/2024/001</div>
-        </div>
+        <div class="profile-area"><div class="avatar"><i class="fas fa-coins"></i></div><div class="welcome-text">Welcome,</div><div class="user-name" id="financeName">Mr. James Peter</div><div class="user-role">💰 Finance Officer</div><div class="user-id" id="financeId">FIN/2024/001</div></div>
         <div class="nav-menu">
-            <a href="finance.php" class="nav-item" data-view="dashboard"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
-            <a href="fin_payments.php" class="nav-item" data-view="payments"><i class="fas fa-credit-card"></i><span class="nav-label">Payment Requests</span></a>
-            <a href="fin_invoices.php" class="nav-item" data-view="invoices"><i class="fas fa-file-invoice"></i><span class="nav-label">Invoices</span></a>
-            <a href="fin_students.php" class="nav-item active" data-view="students"><i class="fas fa-user-graduate"></i><span class="nav-label">Student Accounts</span></a>
-            <a href="fin_reports.php" class="nav-item" data-view="reports"><i class="fas fa-chart-line"></i><span class="nav-label">Reports</span></a>
-            <div class="logout-item"><a href="../login.html" class="nav-item"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <a href="finance.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
+            <a href="fin_queries.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">Student Queries</span></a>
+            <a href="fin_students.php" class="nav-item active"><i class="fas fa-user-check"></i><span class="nav-label">Verification</span></a>
+            <a href="fin_edit.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
+            <a href="fin_reports.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Reports</span></a>
+            <div class="logout-item"><a href="../login.html" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 
     <main class="main-content">
-        <div class="top-bar">
-            <h1 class="page-title">Student Fee Accounts</h1>
-            <div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
-        </div>
-
-        <div class="stats-row">
-            <div class="stat-card"><i class="fas fa-users"></i><div class="stat-number" id="totalStudents">0</div><div>Total Students</div></div>
-            <div class="stat-card"><i class="fas fa-check-circle"></i><div class="stat-number" id="clearStudents">0</div><div>Fee Clear</div></div>
-            <div class="stat-card"><i class="fas fa-exclamation-triangle"></i><div class="stat-number" id="partialStudents">0</div><div>Partial Payment</div></div>
-            <div class="stat-card"><i class="fas fa-coins"></i><div class="stat-number" id="totalArrears">TSh 0</div><div>Total Arrears</div></div>
-        </div>
-
+        <div class="top-bar"><h1 class="page-title">Student Payment Verification</h1><div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div></div>
         <div class="widget-card">
-            <div class="flex-between">
-                <strong>👨‍🎓 Student Fee Accounts</strong>
-                <div>
-                    <input type="text" id="searchStudent" placeholder="Search by name or reg no..." style="width:200px;">
-                    <button class="btn-primary" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
-                </div>
-            </div>
+            <div class="flex-between"><strong>👨‍🎓 Students Awaiting Verification</strong><button class="btn-primary" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button></div>
+            <div class="search-section"><input type="text" id="searchInput" class="search-input" placeholder="Search by name or registration number..."></div>
             <div id="studentsList"></div>
         </div>
     </main>
 </div>
 
-<!-- MODAL FOR VIEWING STUDENT DETAILS -->
-<div id="studentModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header"><h3>Student Fee Details</h3><span class="close-modal">&times;</span></div>
-        <div id="studentDetails"></div>
-        <button class="btn-primary" id="closeStudentModal" style="margin-top:15px;">Close</button>
-    </div>
-</div>
+<div id="verifyModal" class="modal"><div class="modal-content"><div class="modal-header"><h3>Verify Student Payment</h3><span class="close-modal">&times;</span></div>
+<form id="verifyForm"><div class="form-group"><label>Student: <span id="verifyStudentName"></span></label></div><div class="form-group"><label>Registration: <span id="verifyStudentReg"></span></label></div><div class="form-group"><label>Payment Amount</label><input type="text" id="verifyAmount" placeholder="Enter amount paid"></div><div class="form-group"><label>Transaction Reference</label><input type="text" id="verifyTransaction" placeholder="Enter transaction reference"></div><div class="form-group"><label>Verification Notes</label><textarea id="verifyNotes" rows="3" placeholder="Add verification notes..."></textarea></div><div style="display:flex; gap:10px;"><button type="button" class="btn-primary" id="cancelVerifyBtn" style="background:#7f8c8d;">Cancel</button><button type="submit" class="btn-primary">Confirm & Verify</button></div></form></div></div>
 
-<script src="finance.js"></script>
 <script>
-    let students = [];
-    let payments = [];
-
-    function loadData() {
-        students = loadStudentAccounts();
-        payments = loadPayments();
-        updateStats();
-        renderStudents();
-    }
-
-    function updateStats() {
-        const clear = students.filter(s => s.status === 'Clear').length;
-        const partial = students.filter(s => s.status === 'Partial').length;
-        const totalArrears = students.reduce((sum, s) => sum + s.balance, 0);
-        
-        document.getElementById('totalStudents').innerText = students.length;
-        document.getElementById('clearStudents').innerText = clear;
-        document.getElementById('partialStudents').innerText = partial;
-        document.getElementById('totalArrears').innerText = 'TSh ' + totalArrears.toLocaleString();
-    }
-
-    function renderStudents() {
-        const searchTerm = document.getElementById('searchStudent').value.toLowerCase();
-        let filtered = students.filter(s => 
-            s.name.toLowerCase().includes(searchTerm) || 
-            s.regNo.toLowerCase().includes(searchTerm)
-        );
-        
-        const container = document.getElementById('studentsList');
-        
-        if (filtered.length === 0) {
-            container.innerHTML = '<div class="widget-card" style="text-align:center;">No students found</div>';
-            return;
-        }
-        
-        container.innerHTML = `
-            <table>
-                <thead>
-                    <tr><th>Reg No</th><th>Student Name</th><th>Program</th><th>Total Fees</th><th>Paid</th><th>Balance</th><th>Status</th><th>Action</th>
-                </thead>
-                <tbody>
-                    ${filtered.map(s => `
-                        <tr>
-                            <td>${s.regNo}侧
-                            <td>${s.name}侧
-                            <td>${s.program}侧
-                            <td>TSh ${s.totalFees.toLocaleString()}侧
-                            <td>TSh ${s.paidFees.toLocaleString()}侧
-                            <td>TSh ${s.balance.toLocaleString()}侧
-                            <td><span class="status-badge ${s.status === 'Clear' ? 'status-paid' : 'status-pending'}">${s.status === 'Clear' ? '✓ Fee Clear' : 'Partial Payment'}</span>侧
-                            <td><button class="btn-primary view-student" data-reg="${s.regNo}" style="padding:4px 12px;"><i class="fas fa-eye"></i> View</button>侧
-                        </tr>
-                    `).join('')}
-                </tbody>
-            </table>
-        `;
-        
-        document.querySelectorAll('.view-student').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const regNo = btn.dataset.reg;
-                viewStudentDetails(regNo);
-            });
-        });
-    }
-
-    function viewStudentDetails(regNo) {
-        const student = students.find(s => s.regNo === regNo);
-        const studentPayments = payments.filter(p => p.studentReg === regNo);
-        
-        document.getElementById('studentDetails').innerHTML = `
-            <div class="form-group"><strong>Registration Number:</strong> ${student.regNo}</div>
-            <div class="form-group"><strong>Student Name:</strong> ${student.name}</div>
-            <div class="form-group"><strong>Program:</strong> ${student.program}</div>
-            <hr>
-            <div class="form-group"><strong>Total Fees:</strong> TSh ${student.totalFees.toLocaleString()}</div>
-            <div class="form-group"><strong>Total Paid:</strong> TSh ${student.paidFees.toLocaleString()}</div>
-            <div class="form-group"><strong>Outstanding Balance:</strong> TSh ${student.balance.toLocaleString()}</div>
-            <hr>
-            <strong>Payment History:</strong>
-            ${studentPayments.length === 0 ? '<p>No payment records found</p>' : 
-                studentPayments.map(p => `<div class="payment-item"><small>${p.date} - TSh ${p.amount.toLocaleString()} - ${p.purpose} - ${p.status}</small></div>`).join('')}
-        `;
-        document.getElementById('studentModal').style.display = 'flex';
-    }
-
-    document.getElementById('closeStudentModal').addEventListener('click', () => {
-        document.getElementById('studentModal').style.display = 'none';
-    });
+    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
+    let loggedUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
+    document.getElementById('financeName').innerText = loggedUser.name || 'Mr. James Peter';
+    document.getElementById('financeId').innerText = loggedUser.regNo || 'FIN/2024/001';
     
-    document.querySelectorAll('.close-modal').forEach(el => {
-        el.addEventListener('click', () => document.getElementById('studentModal').style.display = 'none');
-    });
-
-    document.getElementById('refreshBtn').addEventListener('click', loadData);
-    document.getElementById('searchStudent').addEventListener('keyup', renderStudents);
-
-    loadData();
+    let students = JSON.parse(localStorage.getItem('finance_students') || '[]');
+    if (students.length === 0) { students = [{ id:1, name:'John Student', regNo:'IAA/2024/0789', program:'Bachelor of Accounting', status:'Pending', amount:850000, date:'2024-06-01' },{ id:2, name:'Mary Student', regNo:'IAA/2024/0456', program:'Bachelor of Finance', status:'Pending', amount:450000, date:'2024-06-02' },{ id:3, name:'Peter Student', regNo:'IAA/2024/0890', program:'Bachelor of Accounting', status:'Verified', amount:850000, date:'2024-05-28' }]; localStorage.setItem('finance_students', JSON.stringify(students)); }
+    
+    function saveStudents() { localStorage.setItem('finance_students', JSON.stringify(students)); }
+    function renderStudents() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        let filtered = students.filter(s => s.status === 'Pending' || s.status === 'Verified');
+        if (searchTerm) filtered = filtered.filter(s => s.name.toLowerCase().includes(searchTerm) || s.regNo.toLowerCase().includes(searchTerm));
+        const container = document.getElementById('studentsList');
+        if (filtered.length === 0) { container.innerHTML = '<div style="text-align:center; padding:40px;">No students found</div>'; return; }
+        container.innerHTML = filtered.map(s => `<div class="student-card"><div class="student-info"><h4>${s.name}</h4><p><i class="fas fa-id-card"></i> ${s.regNo} | <i class="fas fa-book"></i> ${s.program} | Amount: TSh ${s.amount.toLocaleString()}</p></div><div><span class="status-badge ${s.status === 'Verified' ? 'status-verified' : 'status-pending'}">${s.status}</span>${s.status === 'Pending' ? `<button class="btn-verify verify-btn" data-id="${s.id}" data-name="${s.name}" data-reg="${s.regNo}" style="margin-left:10px;"><i class="fas fa-check"></i> Verify</button>` : ''}</div></div>`).join('');
+        document.querySelectorAll('.verify-btn').forEach(btn => btn.addEventListener('click', () => { document.getElementById('verifyStudentName').innerText = btn.dataset.name; document.getElementById('verifyStudentReg').innerText = btn.dataset.reg; document.getElementById('verifyModal').style.display = 'flex'; window.currentVerifyId = parseInt(btn.dataset.id); }));
+    }
+    
+    function verifyStudent(id, amount, transaction, notes) { const student = students.find(s => s.id === id); if (student) { student.status = 'Verified'; student.verifiedAmount = amount; student.transactionRef = transaction; student.verifiedDate = new Date().toLocaleDateString('en-US'); student.notes = notes; saveStudents(); renderStudents(); alert(`✅ ${student.name} has been verified successfully!`); } }
+    
+    document.getElementById('searchInput').addEventListener('keyup', () => renderStudents());
+    document.getElementById('refreshBtn').addEventListener('click', () => renderStudents());
+    document.querySelectorAll('.close-modal, #cancelVerifyBtn').forEach(el => el.addEventListener('click', () => document.getElementById('verifyModal').style.display = 'none'));
+    document.getElementById('verifyForm').addEventListener('submit', (e) => { e.preventDefault(); const amount = document.getElementById('verifyAmount').value; const transaction = document.getElementById('verifyTransaction').value; const notes = document.getElementById('verifyNotes').value; if (!amount) { alert('Please enter amount'); return; } verifyStudent(window.currentVerifyId, amount, transaction, notes); document.getElementById('verifyModal').style.display = 'none'; document.getElementById('verifyAmount').value = ''; document.getElementById('verifyTransaction').value = ''; document.getElementById('verifyNotes').value = ''; });
+    renderStudents();
+    document.getElementById('logoutBtn')?.addEventListener('click', (e) => { e.preventDefault(); sessionStorage.clear(); window.location.href = '../login.html'; });
 </script>
 </body>
 </html>
