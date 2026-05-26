@@ -16,8 +16,33 @@ if ($_SESSION['role'] !== 'student') {
 // Include database connection
 require_once 'config/database.php';
 
+// ========== ENSURE student_id IS IN SESSION ==========
+// If student_id is not in session, find it using reg_no
+if (!isset($_SESSION['student_id'])) {
+    $reg_no = $_SESSION['reg_no'];
+    $find_id_query = "SELECT id FROM students WHERE reg_no = '$reg_no'";
+    $find_id_result = mysqli_query($conn, $find_id_query);
+    if ($find_id_result && mysqli_num_rows($find_id_result) > 0) {
+        $student_id_data = mysqli_fetch_assoc($find_id_result);
+        $_SESSION['student_id'] = $student_id_data['id'];
+    } else {
+        // If student not found, logout
+        session_destroy();
+        header("Location: ../login.php");
+        exit();
+    }
+}
+
+$student_id = $_SESSION['student_id'];
 $fullname = $_SESSION['fullname'];
 $reg_no = $_SESSION['reg_no'];
+
+// ========== GET PROFILE PHOTO USING student_id ==========
+$photo_query = "SELECT profile_photo FROM students WHERE id = $student_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$student_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $student_data['profile_photo'] ?? null;
+// ========================================================
 
 // Get knowledge base articles from database
 $kb_query = "SELECT * FROM knowledge_base WHERE status = 'published' ORDER BY views DESC";
@@ -32,12 +57,41 @@ $kb_result = mysqli_query($conn, $kb_query);
     <title>IAA Student Helpdesk | Knowledge Base</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
+    <style>
+        /* Additional style for avatar with image */
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(135deg, #2c7da0, #1f5068);
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar i {
+            font-size: 35px;
+            color: white;
+        }
+    </style>
 </head>
 <body>
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-graduate"></i></div>
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($current_photo); ?>" alt="Profile Photo">
+                <?php else: ?>
+                    <i class="fas fa-user-graduate"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
             <div class="student-name"><?php echo htmlspecialchars($fullname); ?></div>
             <div class="student-id"><i class="fas fa-id-card"></i> <?php echo htmlspecialchars($reg_no); ?></div>

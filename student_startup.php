@@ -15,9 +15,33 @@ if ($_SESSION['role'] !== 'student') {
 
 require_once 'config/database.php';
 
+// ========== ENSURE student_id IS IN SESSION ==========
+// If student_id is not in session, find it using reg_no
+if (!isset($_SESSION['student_id'])) {
+    $reg_no = $_SESSION['reg_no'];
+    $find_id_query = "SELECT id FROM students WHERE reg_no = '$reg_no'";
+    $find_id_result = mysqli_query($conn, $find_id_query);
+    if ($find_id_result && mysqli_num_rows($find_id_result) > 0) {
+        $student_id_data = mysqli_fetch_assoc($find_id_result);
+        $_SESSION['student_id'] = $student_id_data['id'];
+    } else {
+        // If student not found, logout
+        session_destroy();
+        header("Location: ../login.php");
+        exit();
+    }
+}
+
 $student_id = $_SESSION['student_id'];
 $fullname = $_SESSION['fullname'];
 $reg_no = $_SESSION['reg_no'];
+
+// ========== GET PROFILE PHOTO USING student_id ==========
+$photo_query = "SELECT profile_photo FROM students WHERE id = $student_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$student_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $student_data['profile_photo'] ?? null;
+// ========================================================
 
 // Get opportunities from database
 $opp_query = "SELECT * FROM startup_opportunities WHERE status = 'active' ORDER BY created_at DESC";
@@ -55,6 +79,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/statup.css">
     <style>
+        /* Additional style for avatar with image */
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(135deg, #2c7da0, #1f5068);
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar i {
+            font-size: 35px;
+            color: white;
+        }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .startup-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #e2edf2; padding-bottom: 10px; flex-wrap: wrap; }
@@ -71,13 +116,20 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
         .message.show { display: flex; }
         .message-success { background: #d9f0e5; color: #1d6f42; }
         .message-error { background: #fde8e8; color: #c0392b; }
+        .status-badge { background: #fff3e0; padding: 2px 8px; border-radius: 20px; display: inline-block; font-size: 0.75rem; }
     </style>
 </head>
 <body>
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-graduate"></i></div>
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($current_photo); ?>" alt="Profile Photo">
+                <?php else: ?>
+                    <i class="fas fa-user-graduate"></i>
+                <?php endif; ?>
+            </div>    
             <div class="welcome-text">Welcome,</div>
             <div class="student-name"><?php echo htmlspecialchars($fullname); ?></div>
             <div class="student-id"><i class="fas fa-id-card"></i> <?php echo htmlspecialchars($reg_no); ?></div>
@@ -103,6 +155,10 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
 
         <?php if(isset($success_message)): ?>
             <div class="message message-success show"><?php echo $success_message; ?></div>
+        <?php endif; ?>
+
+        <?php if(isset($error_message)): ?>
+            <div class="message message-error show"><?php echo $error_message; ?></div>
         <?php endif; ?>
 
         <div class="startup-tabs">
@@ -154,8 +210,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
                     <div class="form-group"><label>Jina la Wazo</label><input type="text" name="idea_title" required></div>
                     <div class="form-group"><label>Kategoria ya Biashara</label>
                         <select name="idea_category">
-                            <option>Teknolojia / Tech</option><option>Kilimo / Agriculture</option>
-                            <option>Biashara / Trade</option><option>Huduma / Services</option><option>Ubunifu / Creative</option>
+                            <option>Teknolojia / Tech</option>
+                            <option>Kilimo / Agriculture</option>
+                            <option>Biashara / Trade</option>
+                            <option>Huduma / Services</option>
+                            <option>Ubunifu / Creative</option>
                         </select>
                     </div>
                     <div class="form-group"><label>Maelezo ya Wazo</label><textarea name="idea_description" rows="4" required></textarea></div>
@@ -178,7 +237,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
                             <div class="card-desc" style="font-size:0.8rem; color:#7f8c8d;"><?php echo htmlspecialchars($idea['description']); ?></div>
                             <div class="card-footer" style="margin-top:10px;">
                                 <span><i class="fas fa-tools"></i> Anahitaji: <?php echo htmlspecialchars($idea['resources_needed']); ?></span>
-                                <span class="status-badge" style="background:#fff3e0; padding:2px 8px; border-radius:20px;"><?php echo ucfirst($idea['status']); ?></span>
+                                <span class="status-badge"><?php echo ucfirst($idea['status']); ?></span>
                             </div>
                         </div>
                     <?php endwhile; ?>
@@ -231,18 +290,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
     });
 
     // Filter opportunities
-    document.getElementById('filterCategory')?.addEventListener('change', function() {
-        const filter = this.value;
-        const cards = document.querySelectorAll('#opportunitiesTab .opportunity-card');
-        cards.forEach(card => {
-            const type = card.querySelector('.card-type').textContent.trim().toLowerCase();
-            if (filter === 'all' || type.includes(filter)) {
-                card.style.display = 'block';
-            } else {
-                card.style.display = 'none';
-            }
+    const filterSelect = document.getElementById('filterCategory');
+    if (filterSelect) {
+        filterSelect.addEventListener('change', function() {
+            const filter = this.value;
+            const cards = document.querySelectorAll('#opportunitiesTab .opportunity-card');
+            cards.forEach(card => {
+                const typeElement = card.querySelector('.card-type');
+                if (typeElement) {
+                    const type = typeElement.textContent.trim().toLowerCase();
+                    if (filter === 'all' || type.includes(filter)) {
+                        card.style.display = 'block';
+                    } else {
+                        card.style.display = 'none';
+                    }
+                }
+            });
         });
-    });
+    }
 </script>
 </body>
 </html>

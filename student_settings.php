@@ -15,9 +15,33 @@ if ($_SESSION['role'] !== 'student') {
 
 require_once 'config/database.php';
 
+// ========== ENSURE student_id IS IN SESSION ==========
+// If student_id is not in session, find it using reg_no
+if (!isset($_SESSION['student_id'])) {
+    $reg_no = $_SESSION['reg_no'];
+    $find_id_query = "SELECT id FROM students WHERE reg_no = '$reg_no'";
+    $find_id_result = mysqli_query($conn, $find_id_query);
+    if ($find_id_result && mysqli_num_rows($find_id_result) > 0) {
+        $student_id_data = mysqli_fetch_assoc($find_id_result);
+        $_SESSION['student_id'] = $student_id_data['id'];
+    } else {
+        // If student not found, logout
+        session_destroy();
+        header("Location: ../login.php");
+        exit();
+    }
+}
+
 $student_id = $_SESSION['student_id'];
 $fullname = $_SESSION['fullname'];
 $reg_no = $_SESSION['reg_no'];
+
+// ========== GET PROFILE PHOTO USING student_id ==========
+$photo_query = "SELECT profile_photo FROM students WHERE id = $student_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$student_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $student_data['profile_photo'] ?? null;
+// ========================================================
 
 // Get current user data
 $user_query = "SELECT * FROM students WHERE id = '$student_id'";
@@ -63,17 +87,81 @@ if (isset($_GET['clear_data'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .message { padding: 10px 14px; border-radius: 12px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
-        .message.show { display: flex; }
-        .message-success { background: #d9f0e5; color: #1d6f42; }
-        .message-error { background: #fde8e8; color: #c0392b; }
+        /* Additional style for avatar with image */
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(135deg, #2c7da0, #1f5068);
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar i {
+            font-size: 35px;
+            color: white;
+        }
+        .message { 
+            padding: 10px 14px; 
+            border-radius: 12px; 
+            margin-bottom: 20px; 
+            display: none; 
+            align-items: center; 
+            gap: 10px; 
+        }
+        .message.show { 
+            display: flex; 
+        }
+        .message-success { 
+            background: #d9f0e5; 
+            color: #1d6f42; 
+        }
+        .message-error { 
+            background: #fde8e8; 
+            color: #c0392b; 
+        }
+        .form-group {
+            margin-bottom: 15px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        .form-group input, .form-group select {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+        }
+        .btn-primary {
+            background: #2c7da0;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-graduate"></i></div>
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($current_photo); ?>" alt="Profile Photo">
+                <?php else: ?>
+                    <i class="fas fa-user-graduate"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
             <div class="student-name"><?php echo htmlspecialchars($fullname); ?></div>
             <div class="student-id"><i class="fas fa-id-card"></i> <?php echo htmlspecialchars($reg_no); ?></div>
@@ -107,10 +195,20 @@ if (isset($_GET['clear_data'])) {
         <div class="widget-card">
             <div class="flex-between"><strong>⚙️ Account Settings</strong></div>
             <form method="POST" action="">
-                <div class="form-group"><label>Full Name</label><input type="text" name="fullname" value="<?php echo htmlspecialchars($user['fullname']); ?>" required></div>
-                <div class="form-group"><label>Email Address (for notifications)</label><input type="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required></div>
-                <div class="form-group"><label>Phone Number (SMS notifications)</label><input type="text" name="phone" value="<?php echo htmlspecialchars($user['phone']); ?>"></div>
-                <div class="form-group"><label>Default Department for queries</label>
+                <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="fullname" value="<?php echo htmlspecialchars($user['fullname']); ?>" required>
+                </div>
+                <div class="form-group">
+                    <label>Email Address (for notifications)</label>
+                    <input type="email" name="email" value="<?php echo htmlspecialchars($user['email']); ?>" required>
+                </div>
+                <div class="form-group">
+                    <label>Phone Number (SMS notifications)</label>
+                    <input type="text" name="phone" value="<?php echo htmlspecialchars($user['phone']); ?>">
+                </div>
+                <div class="form-group">
+                    <label>Default Department for queries</label>
                     <select name="default_dept">
                         <option>ICT Support</option>
                         <option>Examination & Records</option>
@@ -118,7 +216,8 @@ if (isset($_GET['clear_data'])) {
                         <option>Academic Registry</option>
                     </select>
                 </div>
-                <div class="form-group"><label>Notification Preference</label>
+                <div class="form-group">
+                    <label>Notification Preference</label>
                     <select name="notif_pref">
                         <option>Email & SMS</option>
                         <option>Email only</option>

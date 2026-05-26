@@ -5,6 +5,8 @@
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+
+
 body {
     background: #f0f2f8;
     height: 100vh;
@@ -209,3 +211,27 @@ input, select, textarea {
 .kb-list { list-style: none; line-height: 2; }
 .kb-list li { margin-bottom: 12px; }
 .kb-list i { color: #2c7da0; margin-right: 10px; }
+
+/* ========== AVATAR / PROFILE PHOTO STYLES ========== */
+.avatar {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    margin: 0 auto 12px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    background: linear-gradient(135deg, #2c7da0, #1f5068);
+}
+
+.avatar img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar i {
+    font-size: 35px;
+    color: white;
+}

@@ -19,6 +19,13 @@ $student_id = $_SESSION['student_id'];
 $fullname = $_SESSION['fullname'];
 $reg_no = $_SESSION['reg_no'];
 
+// ========== GET PROFILE PHOTO ==========
+$photo_query = "SELECT profile_photo FROM students WHERE id = $student_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$student_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $student_data['profile_photo'] ?? null;
+// =======================================
+
 // Handle AJAX requests for resolving ticket
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
@@ -170,13 +177,42 @@ while ($row = mysqli_fetch_assoc($ratings_result)) {
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        
+        /* Avatar styles for student sidebar */
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(135deg, #2c7da0, #1f5068);
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar i {
+            font-size: 35px;
+            color: white;
+        }
     </style>
 </head>
 <body>
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-graduate"></i></div>
+            <!-- SIDEBAR AVATAR - SAHIHI -->
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo">
+                <?php else: ?>
+                    <i class="fas fa-user-graduate"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
             <div class="student-name"><?php echo htmlspecialchars($fullname); ?></div>
             <div class="student-id"><i class="fas fa-id-card"></i> <?php echo htmlspecialchars($reg_no); ?></div>
@@ -252,7 +288,7 @@ while ($row = mysqli_fetch_assoc($ratings_result)) {
                                         <span style="font-size:0.8rem;">⭐ Rate resolution:</span>
                                         <span class="star" data-rate="1" style="cursor:pointer; font-size:1.2rem;">★</span>
                                         <span class="star" data-rate="2" style="cursor:pointer; font-size:1.2rem;">★</span>
-                                        <span class="star" data-rate="3" style: "cursor:pointer; font-size:1.2rem;">★</span>
+                                        <span class="star" data-rate="3" style="cursor:pointer; font-size:1.2rem;">★</span>
                                         <span class="star" data-rate="4" style="cursor:pointer; font-size:1.2rem;">★</span>
                                         <span class="star" data-rate="5" style="cursor:pointer; font-size:1.2rem;">★</span>
                                     </div>

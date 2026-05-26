@@ -3,13 +3,13 @@ session_start();
 
 // Check if user is logged in
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: ../login.php");
+    header("Location: login.php");
     exit();
 }
 
 // Check if user has student role
 if ($_SESSION['role'] !== 'student') {
-    header("Location: ../" . $_SESSION['role'] . "/dashboard.php");
+    header("Location: " . $_SESSION['role'] . "_dashboard.php");
     exit();
 }
 
@@ -19,29 +19,33 @@ $student_id = $_SESSION['student_id'];
 $fullname = $_SESSION['fullname'];
 $reg_no = $_SESSION['reg_no'];
 
+// Get current profile photo
+$photo_query = "SELECT profile_photo FROM students WHERE id = $student_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$student_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $student_data['profile_photo'] ?? null;
+
 // Handle photo upload
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['profile_photo'])) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
     $file = $_FILES['profile_photo'];
-    $allowed = ['image/jpeg', 'image/png', 'image/jpg'];
+    $allowed_types = ['image/jpeg', 'image/png', 'image/jpg'];
     
-    if (in_array($file['type'], $allowed) && $file['size'] <= 1 * 1024 * 1024) {
+    if (in_array($file['type'], $allowed_types) && $file['size'] <= 1 * 1024 * 1024) {
         $image_data = base64_encode(file_get_contents($file['tmp_name']));
-        $update_query = "UPDATE students SET profile_photo = '$image_data' WHERE id = '$student_id'";
+        $update_query = "UPDATE students SET profile_photo = '$image_data' WHERE id = $student_id";
+        
         if (mysqli_query($conn, $update_query)) {
-            $success_message = "Profile photo updated successfully!";
+            $_SESSION['success'] = "Profile photo updated successfully!";
+            $current_photo = $image_data;
         } else {
-            $error_message = "Error updating photo.";
+            $_SESSION['error'] = "Database error: " . mysqli_error($conn);
         }
     } else {
-        $error_message = "Invalid file! Use JPEG, PNG, JPG (max 1MB).";
+        $_SESSION['error'] = "Invalid file! Use JPEG, PNG, JPG (max 1MB).";
     }
+    header("Location: student_edit-photo.php");
+    exit();
 }
-
-// Get current photo
-$photo_query = "SELECT profile_photo FROM students WHERE id = '$student_id'";
-$photo_result = mysqli_query($conn, $photo_query);
-$student = mysqli_fetch_assoc($photo_result);
-$current_photo = $student['profile_photo'];
 ?>
 
 <!DOCTYPE html>
@@ -73,13 +77,22 @@ $current_photo = $student['profile_photo'];
         .message.show { display: flex; }
         .message-success { background: #d9f0e5; color: #1d6f42; }
         .message-error { background: #fde8e8; color: #c0392b; }
+        .avatar { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #2c7da0, #1f5068); }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar i { font-size: 35px; color: white; }
     </style>
 </head>
 <body>
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-graduate"></i></div>
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo">
+                <?php else: ?>
+                    <i class="fas fa-user-graduate"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
             <div class="student-name"><?php echo htmlspecialchars($fullname); ?></div>
             <div class="student-id"><i class="fas fa-id-card"></i> <?php echo htmlspecialchars($reg_no); ?></div>
@@ -100,14 +113,14 @@ $current_photo = $student['profile_photo'];
     <main class="main-content">
         <div class="top-bar">
             <h1 class="page-title">Edit Profile Photo | IAA Helpdesk</h1>
-            <div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
+            <div class="date-badge"><i class="far fa-calendar-alt"></i> <?php echo date('D, M j, Y'); ?></div>
         </div>
 
-        <?php if(isset($success_message)): ?>
-            <div class="message message-success show"><?php echo $success_message; ?></div>
+        <?php if (isset($_SESSION['success'])): ?>
+            <div class="message message-success show"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
         <?php endif; ?>
-        <?php if(isset($error_message)): ?>
-            <div class="message message-error show"><?php echo $error_message; ?></div>
+        <?php if (isset($_SESSION['error'])): ?>
+            <div class="message message-error show"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
         <?php endif; ?>
 
         <div class="edit-photo-wrapper">
@@ -117,18 +130,7 @@ $current_photo = $student['profile_photo'];
                 <div class="user-reg-number"><?php echo htmlspecialchars($reg_no); ?></div>
             </div>
 
-            <div class="photo-preview-card">
-                <div class="photo-preview-label"><i class="fas fa-image"></i> Current Profile Photo</div>
-                <div class="photo-circle-preview">
-                    <?php if($current_photo): ?>
-                        <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo" id="previewImage">
-                    <?php else: ?>
-                        <img src="https://ui-avatars.com/api/?background=2c7da0&color=fff&size=150&name=<?php echo urlencode($fullname); ?>" alt="Profile Photo" id="previewImage">
-                    <?php endif; ?>
-                </div>
-            </div>
-
-            <div class="isms-info"><i class="fas fa-shield-alt"></i> Required format PNG, JPG & JPEG Only (size less than 1 MB)</div>
+       
 
             <form method="POST" action="" enctype="multipart/form-data">
                 <div class="upload-card">
@@ -138,7 +140,7 @@ $current_photo = $student['profile_photo'];
                         <label class="custom-file-label" id="fileLabel">
                             <i class="fas fa-folder-open"></i> Choose File
                         </label>
-                        <input type="file" name="profile_photo" id="photoFile" accept="image/jpeg,image/png,image/jpg" style="display: none;" required>
+                        <input type="file" name="profile_photo" id="photoFile" accept="image/jpeg,image/png,image/jpg" style="display: none;">
                     </div>
                     <div class="selected-file-name" id="fileNameDisplay">No file chosen</div>
                 </div>
@@ -149,20 +151,13 @@ $current_photo = $student['profile_photo'];
 </div>
 
 <script>
-    function setCurrentDate() {
-        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-        const dateElement = document.getElementById('currentDate');
-        if (dateElement) dateElement.innerText = new Date().toLocaleDateString('en-US', options);
-    }
-    setCurrentDate();
-
     const photoInput = document.getElementById('photoFile');
     const fileLabel = document.getElementById('fileLabel');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
     const previewImage = document.getElementById('previewImage');
 
     fileLabel.addEventListener('click', () => photoInput.click());
-    
+
     photoInput.addEventListener('change', function(e) {
         const file = e.target.files[0];
         if (file) {
