@@ -15,6 +15,10 @@ if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
 
 require_once 'config/database.php';
 
+// ========== ADD THIS LINE - FIXES THE ERROR ==========
+$logged_user_id = $_SESSION['student_id'];
+// =====================================================
+
 // Handle AJAX request for updating status
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'update_status') {
     $ticket_id = intval($_POST['ticket_id']);
@@ -37,14 +41,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // Filter
 $filter = isset($_GET['filter']) ? $_GET['filter'] : 'all';
 $status_condition = '';
+
 if ($filter !== 'all') {
     $filter_db = strtolower(str_replace(' ', '_', $filter));
     $status_condition = "WHERE t.status = '$filter_db'";
 }
 
-// Fetch tickets with student and department names
+// Get profile photo - NOW $logged_user_id is defined
+$photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$admin_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $admin_data['profile_photo'] ?? null;
+
+// Fetch tickets with student, department names, and document info
 $query = "
     SELECT t.id, t.ticket_no, t.title, t.priority, t.status, t.created_at,
+           t.has_document, t.document_name, t.document_path, t.document_type,
            s.fullname AS student_name,
            d.name AS department_name
     FROM tickets t
@@ -70,21 +82,45 @@ while ($row = mysqli_fetch_assoc($result)) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/admin.css">
     <style>
-        /* Quick fallback styles */
-        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.75rem; font-weight: bold; }
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; display: inline-block; }
         .status-urgent { background: #fde8e8; color: #c0392b; }
-        .btn-primary { background: #1e5a74; border: none; padding: 6px 15px; border-radius: 30px; color: white; cursor: pointer; }
+        .status-resolved { background: #d9f0e5; color: #1d6f42; }
+        .status-progress { background: #fff3e0; color: #b45f06; }
+        .btn-primary { background: #1e5a74; border: none; padding: 6px 12px; border-radius: 30px; color: white; cursor: pointer; font-size: 0.75rem; }
         .btn-primary:hover { background: #0f4057; }
+        .btn-sm { padding: 4px 10px; font-size: 0.7rem; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { border-bottom: 1px solid #ddd; padding: 10px; text-align: left; }
-        th { background: #f2f2f2; }
+        th, td { border-bottom: 1px solid #e2e8f0; padding: 12px 10px; text-align: left; }
+        th { background: #f8fafc; font-weight: 600; color: #0a2b38; }
+        tr:hover { background: #f8fafc; }
+        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2edf2; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; }
+        .page-title { font-size: 1.6rem; font-weight: 700; color: #0a2b38; }
+        .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; border: 1px solid #dee9f0; }
+        .document-badge { background: #e8f0f5; color: #2c7da0; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; display: inline-flex; align-items: center; gap: 5px; }
+        
+        /* Document Modal */
+        .doc-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 10000; align-items: center; justify-content: center; }
+        .doc-modal-content { max-width: 90%; max-height: 90%; background: white; border-radius: 16px; overflow: auto; padding: 20px; position: relative; }
+        .doc-modal-close { position: absolute; top: 10px; right: 20px; background: #e74c3c; color: white; border: none; padding: 8px 16px; border-radius: 30px; cursor: pointer; font-size: 0.8rem; }
+        .doc-modal-close:hover { background: #c0392b; }
+        .doc-image { max-width: 100%; max-height: 80vh; display: block; margin: 0 auto; }
+        .doc-iframe { width: 100%; height: 80vh; border: none; }
+        .doc-download { display: inline-block; margin-top: 15px; padding: 8px 16px; background: #2c7da0; color: white; border-radius: 30px; text-decoration: none; font-size: 0.8rem; }
     </style>
 </head>
 <body>
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-shield"></i></div>
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                <?php else: ?>
+                    <i class="fas fa-user-shield"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
             <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
             <div class="user-role"><?php echo ($_SESSION['role'] == 'super_admin') ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
@@ -113,7 +149,7 @@ while ($row = mysqli_fetch_assoc($result)) {
             <div class="flex-between">
                 <strong>🎫 All System Tickets</strong>
                 <div>
-                    <select id="filterStatus" style="width:150px; margin-right:10px;">
+                    <select id="filterStatus" style="width:150px; margin-right:10px; padding:6px; border-radius:20px; border:1px solid #cbdbe6;">
                         <option value="all" <?php echo $filter == 'all' ? 'selected' : ''; ?>>All Status</option>
                         <option value="Open" <?php echo $filter == 'Open' ? 'selected' : ''; ?>>Open</option>
                         <option value="In Progress" <?php echo $filter == 'In Progress' ? 'selected' : ''; ?>>In Progress</option>
@@ -122,45 +158,102 @@ while ($row = mysqli_fetch_assoc($result)) {
                     <button class="btn-primary" id="refreshTicketsBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
                 </div>
             </div>
-            <table id="allTicketsTable">
-                <thead>
-                    <tr><th>Ticket No</th><th>Student</th><th>Subject</th><th>Department</th><th>Priority</th><th>Status</th><th>Date</th><th>Actions</th>
-                </thead>
-                <tbody id="allTicketsBody">
-                    <?php if (empty($tickets)): ?>
-                        <tr><td colspan="8">No tickets found.<?php else: ?>
-                        <?php foreach ($tickets as $t): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($t['ticket_no']); ?>侧
-                            <td><?php echo htmlspecialchars($t['student_name'] ?? 'Unknown'); ?>侧
-                            <td><?php echo htmlspecialchars(substr($t['title'], 0, 50)); ?>侧
-                            <td><?php echo htmlspecialchars($t['department_name'] ?? 'Unassigned'); ?>侧
-                            <td><span class="status-badge <?php echo ($t['priority'] == 'urgent') ? 'status-urgent' : ''; ?>"><?php echo ucfirst($t['priority']); ?></span>侧
-                            <td>
-                                <select class="status-select" data-id="<?php echo $t['id']; ?>">
-                                    <option value="Open" <?php echo ($t['display_status'] == 'Open') ? 'selected' : ''; ?>>Open</option>
-                                    <option value="In Progress" <?php echo ($t['display_status'] == 'In Progress') ? 'selected' : ''; ?>>In Progress</option>
-                                    <option value="Resolved" <?php echo ($t['display_status'] == 'Resolved') ? 'selected' : ''; ?>>Resolved</option>
-                                </select>
-                            侧
-                            <td><?php echo date('d/m/Y', strtotime($t['created_at'])); ?>侧
-                            <td><button class="btn-primary view-ticket" data-id="<?php echo $t['id']; ?>" data-title="<?php echo htmlspecialchars($t['title']); ?>"><i class="fas fa-eye"></i> View</button>侧
-                        </tr>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+            
+            <?php if (empty($tickets)): ?>
+                <div style="text-align: center; padding: 40px; color: #7f8c8d;">
+                    <i class="fas fa-ticket-alt" style="font-size: 48px; margin-bottom: 10px; display: block;"></i>
+                    No tickets found.
+                </div>
+            <?php else: ?>
+                <div style="overflow-x: auto;">
+                    <table id="allTicketsTable">
+                        <thead>
+                            <tr>
+                                <th>Ticket No</th>
+                                <th>Student</th>
+                                <th>Subject</th>
+                                <th>Department</th>
+                                <th>Priority</th>
+                                <th>Status</th>
+                                <th>Document</th>
+                                <th>Date</th>
+                                <th>Actions</th>
+                            </thead>
+                        <tbody>
+                            <?php foreach ($tickets as $t): ?>
+                            <tr>
+                                <td><strong><?php echo htmlspecialchars($t['ticket_no']); ?></strong>侧
+                                <td><?php echo htmlspecialchars($t['student_name'] ?? 'Unknown'); ?>侧
+                                <td><?php echo htmlspecialchars(substr($t['title'], 0, 50)); ?>侧
+                                <td><?php echo htmlspecialchars($t['department_name'] ?? 'Unassigned'); ?>侧
+                                <td>
+                                    <span class="status-badge <?php echo ($t['priority'] == 'urgent') ? 'status-urgent' : ''; ?>">
+                                        <?php echo ucfirst($t['priority']); ?>
+                                    </span>
+                                侧
+                                <td>
+                                    <select class="status-select" data-id="<?php echo $t['id']; ?>" style="padding:4px 8px; border-radius:12px; border:1px solid #cbdbe6;">
+                                        <option value="Open" <?php echo ($t['display_status'] == 'Open') ? 'selected' : ''; ?>>Open</option>
+                                        <option value="In Progress" <?php echo ($t['display_status'] == 'In Progress') ? 'selected' : ''; ?>>In Progress</option>
+                                        <option value="Resolved" <?php echo ($t['display_status'] == 'Resolved') ? 'selected' : ''; ?>>Resolved</option>
+                                    </select>
+                                侧
+                                <td>
+                                    <?php if($t['has_document'] && $t['document_path']): ?>
+                                        <button class="btn-primary btn-sm view-doc-btn" 
+                                                data-doc-path="<?php echo htmlspecialchars($t['document_path']); ?>" 
+                                                data-doc-name="<?php echo htmlspecialchars($t['document_name']); ?>"
+                                                style="background:#2c7da0;">
+                                            <i class="fas fa-paperclip"></i> View
+                                        </button>
+                                    <?php else: ?>
+                                        <span style="color:#94a3b8; font-size:0.7rem;">No document</span>
+                                    <?php endif; ?>
+                                侧
+                                <td><?php echo date('d/m/Y', strtotime($t['created_at'])); ?>侧
+                                <td>
+                                    <button class="btn-primary btn-sm view-ticket" data-id="<?php echo $t['id']; ?>" data-title="<?php echo htmlspecialchars($t['title']); ?>">
+                                        <i class="fas fa-info-circle"></i> Details
+                                    </button>
+                                侧
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            <?php endif; ?>
         </div>
     </main>
 </div>
 
+<!-- Document Viewer Modal -->
+<div id="docViewerModal" class="doc-modal">
+    <div class="doc-modal-content">
+        <button class="doc-modal-close" onclick="closeDocViewer()">✕ Close</button>
+        <div id="docViewerBody" style="text-align: center;">
+            <div style="text-align: center; padding: 20px;">
+                <i class="fas fa-spinner fa-pulse" style="font-size: 40px; color: #2c7da0;"></i>
+                <p>Loading document...</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Ticket Details Modal -->
+<div id="ticketModal" class="doc-modal">
+    <div class="doc-modal-content" style="max-width: 600px;">
+        <button class="doc-modal-close" onclick="closeTicketModal()">✕ Close</button>
+        <div id="ticketDetailsBody"></div>
+    </div>
+</div>
+
 <script>
+    // Set current date
     document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', { weekday:'short', year:'numeric', month:'short', day:'numeric' });
 
-    // Filter change - reload page with selected filter
+    // Filter change
     document.getElementById('filterStatus').addEventListener('change', function() {
-        let filter = this.value;
-        window.location.href = 'admin_tickets_view.php?filter=' + encodeURIComponent(filter);
+        window.location.href = 'admin_tickets_view.php?filter=' + encodeURIComponent(this.value);
     });
 
     // Refresh button
@@ -173,6 +266,7 @@ while ($row = mysqli_fetch_assoc($result)) {
         select.addEventListener('change', function() {
             let ticketId = this.dataset.id;
             let newStatus = this.value;
+            
             fetch(window.location.href, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
@@ -181,10 +275,10 @@ while ($row = mysqli_fetch_assoc($result)) {
             .then(response => response.text())
             .then(data => {
                 if (data.trim() === 'success') {
-                    alert('Status updated successfully!');
+                    alert('✅ Status updated successfully!');
                     window.location.reload();
                 } else {
-                    alert('Error updating status. Please try again.');
+                    alert('❌ Error updating status. Please try again.');
                 }
             })
             .catch(err => {
@@ -193,14 +287,99 @@ while ($row = mysqli_fetch_assoc($result)) {
         });
     });
 
-    // View ticket details (simple alert – you can expand)
-    document.querySelectorAll('.view-ticket').forEach(btn => {
+    // Document Viewer Function
+    function viewDocument(docPath, docName) {
+        const modal = document.getElementById('docViewerModal');
+        const modalBody = document.getElementById('docViewerBody');
+        
+        modalBody.innerHTML = '<div style="text-align: center; padding: 20px;"><i class="fas fa-spinner fa-pulse" style="font-size: 40px;"></i><p>Loading document...</p></div>';
+        modal.style.display = 'flex';
+        
+        const extension = docPath.split('.').pop().toLowerCase();
+        const imageExtensions = ['jpg', 'jpeg', 'png', 'gif', 'webp'];
+        
+        if (imageExtensions.includes(extension)) {
+            const img = new Image();
+            img.onload = () => {
+                modalBody.innerHTML = '';
+                modalBody.appendChild(img);
+                img.className = 'doc-image';
+            };
+            img.onerror = () => {
+                modalBody.innerHTML = `<p>Unable to preview image. <a href="${docPath}" download="${docName}" class="doc-download">Download ${docName}</a></p>`;
+            };
+            img.src = docPath;
+        } else if (extension === 'pdf') {
+            const iframe = document.createElement('iframe');
+            iframe.src = docPath;
+            iframe.style.width = '100%';
+            iframe.style.height = '80vh';
+            iframe.style.border = 'none';
+            modalBody.innerHTML = '';
+            modalBody.appendChild(iframe);
+        } else {
+            modalBody.innerHTML = `<p>Preview not available for this file type.</p>
+                                   <a href="${docPath}" download="${docName}" class="doc-download"><i class="fas fa-download"></i> Download ${docName}</a>`;
+        }
+    }
+    
+    function closeDocViewer() {
+        document.getElementById('docViewerModal').style.display = 'none';
+    }
+    
+    // View Ticket Details
+    function viewTicketDetails(ticketId, title) {
+        const modal = document.getElementById('ticketModal');
+        const modalBody = document.getElementById('ticketDetailsBody');
+        
+        modalBody.innerHTML = `
+            <div style="padding: 10px;">
+                <h3><i class="fas fa-ticket-alt"></i> Ticket #${ticketId}</h3>
+                <p><strong>Title:</strong> ${title}</p>
+                <p><strong>Status:</strong> <span class="status-badge">${document.querySelector(`.status-select[data-id="${ticketId}"]`)?.value || 'Unknown'}</span></p>
+                <hr>
+                <p><i class="fas fa-info-circle"></i> Full ticket details will be displayed here.</p>
+                <p>You can expand this feature to show:</p>
+                <ul>
+                    <li>Full description</li>
+                    <li>Response history</li>
+                    <li>Attached documents</li>
+                    <li>Student contact info</li>
+                </ul>
+            </div>
+        `;
+        modal.style.display = 'flex';
+    }
+    
+    function closeTicketModal() {
+        document.getElementById('ticketModal').style.display = 'none';
+    }
+    
+    // Attach document view listeners
+    document.querySelectorAll('.view-doc-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            let ticketId = this.dataset.id;
-            let title = this.dataset.title;
-            alert('Ticket #' + ticketId + ': ' + title + '\nFull details will be shown here.');
+            const docPath = this.dataset.docPath;
+            const docName = this.dataset.docName;
+            viewDocument(docPath, docName);
         });
     });
+    
+    // Attach ticket view listeners
+    document.querySelectorAll('.view-ticket').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const ticketId = this.dataset.id;
+            const title = this.dataset.title;
+            viewTicketDetails(ticketId, title);
+        });
+    });
+    
+    // Close modals when clicking outside
+    window.onclick = function(event) {
+        const docModal = document.getElementById('docViewerModal');
+        const ticketModal = document.getElementById('ticketModal');
+        if (event.target === docModal) closeDocViewer();
+        if (event.target === ticketModal) closeTicketModal();
+    }
 </script>
 </body>
 </html>

@@ -14,7 +14,7 @@ if ($_SESSION['role'] !== 'student') {
 }
 
 // Include database connection
-require_once '../config/database.php';
+require_once 'config/database.php';
 
 $fullname = $_SESSION['fullname'];
 $reg_no = $_SESSION['reg_no'];
@@ -31,7 +31,7 @@ $kb_result = mysqli_query($conn, $kb_query);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IAA Student Helpdesk | Knowledge Base</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="app-container">
@@ -51,7 +51,7 @@ $kb_result = mysqli_query($conn, $kb_query);
             <a href="student_edit-photo.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
             <a href="student_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
             <a href="student_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
-            <div class="logout-item"><a href="../logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <div class="logout-item"><a href="logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 

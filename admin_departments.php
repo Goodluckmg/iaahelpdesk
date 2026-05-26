@@ -15,17 +15,38 @@ if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
 
 require_once 'config/database.php';
 
+$logged_user_id = $_SESSION['student_id'];
+$logged_role = $_SESSION['role'];
+$is_super_admin = ($logged_role === 'super_admin');
+
+// Get profile photo for sidebar
+$photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$admin_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $admin_data['profile_photo'] ?? null;
+
 // Handle Add Department
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add') {
-    $name = mysqli_real_escape_string($conn, $_POST['name']);
-    $head = mysqli_real_escape_string($conn, $_POST['head']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $name = mysqli_real_escape_string($conn, trim($_POST['name']));
+    $head = mysqli_real_escape_string($conn, trim($_POST['head']));
+    $email = mysqli_real_escape_string($conn, trim($_POST['email']));
     
-    $insert = "INSERT INTO departments (name, head_of_department, email, status) VALUES ('$name', '$head', '$email', 'active')";
-    if (mysqli_query($conn, $insert)) {
-        $_SESSION['success'] = "Department added successfully!";
+    // Validate input
+    if (empty($name) || empty($head) || empty($email)) {
+        $_SESSION['error'] = "All fields are required!";
     } else {
-        $_SESSION['error'] = "Error: " . mysqli_error($conn);
+        // Check if department already exists
+        $check = mysqli_query($conn, "SELECT id FROM departments WHERE name = '$name'");
+        if (mysqli_num_rows($check) > 0) {
+            $_SESSION['error'] = "Department already exists!";
+        } else {
+            $insert = "INSERT INTO departments (name, head_of_department, email, status) VALUES ('$name', '$head', '$email', 'active')";
+            if (mysqli_query($conn, $insert)) {
+                $_SESSION['success'] = "Department added successfully!";
+            } else {
+                $_SESSION['error'] = "Error: " . mysqli_error($conn);
+            }
+        }
     }
     header("Location: admin_departments.php");
     exit();
@@ -34,15 +55,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 // Handle Edit Department
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'edit') {
     $id = intval($_POST['id']);
-    $name = mysqli_real_escape_string($conn, $_POST['name']);
-    $head = mysqli_real_escape_string($conn, $_POST['head']);
-    $email = mysqli_real_escape_string($conn, $_POST['email']);
+    $name = mysqli_real_escape_string($conn, trim($_POST['name']));
+    $head = mysqli_real_escape_string($conn, trim($_POST['head']));
+    $email = mysqli_real_escape_string($conn, trim($_POST['email']));
     
-    $update = "UPDATE departments SET name = '$name', head_of_department = '$head', email = '$email' WHERE id = $id";
-    if (mysqli_query($conn, $update)) {
-        $_SESSION['success'] = "Department updated successfully!";
+    if (empty($name) || empty($head) || empty($email)) {
+        $_SESSION['error'] = "All fields are required!";
     } else {
-        $_SESSION['error'] = "Error: " . mysqli_error($conn);
+        $update = "UPDATE departments SET name = '$name', head_of_department = '$head', email = '$email' WHERE id = $id";
+        if (mysqli_query($conn, $update)) {
+            $_SESSION['success'] = "Department updated successfully!";
+        } else {
+            $_SESSION['error'] = "Error: " . mysqli_error($conn);
+        }
     }
     header("Location: admin_departments.php");
     exit();
@@ -101,29 +126,45 @@ if (isset($_GET['edit'])) {
     <style>
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: white; border-radius: 20px; padding: 25px; width: 90%; max-width: 500px; }
-        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #e2edf2; }
         .close-modal, .close-dept-modal { cursor: pointer; font-size: 1.5rem; color: #7f8c8d; }
         .close-modal:hover, .close-dept-modal:hover { color: #c0392b; }
         .form-group { margin-bottom: 15px; }
-        .form-group label { font-weight: 600; display: block; margin-bottom: 5px; }
-        input, select { width: 100%; padding: 10px; border-radius: 12px; border: 1px solid #cbdbe6; }
-        .btn-primary { background: #e74c3c; border: none; padding: 8px 18px; border-radius: 30px; color: white; cursor: pointer; }
+        .form-group label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.85rem; }
+        input, select { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #cbdbe6; outline: none; }
+        input:focus, select:focus { border-color: #e74c3c; box-shadow: 0 0 0 2px rgba(231,76,60,0.1); }
+        .btn-primary { background: #e74c3c; border: none; padding: 8px 18px; border-radius: 30px; color: white; cursor: pointer; transition: 0.2s; }
         .btn-primary:hover { background: #c0392b; }
         .btn-danger { background: #c0392b; }
         .btn-danger:hover { background: #a93226; }
-        .message { padding: 10px; border-radius: 8px; margin-bottom: 15px; }
+        .btn-sm { padding: 5px 12px; font-size: 0.75rem; }
+        .message { padding: 12px 15px; border-radius: 10px; margin-bottom: 20px; }
         .message-success { background: #d4edda; color: #155724; border: 1px solid #c3e6cb; }
         .message-error { background: #f8d7da; color: #721c24; border: 1px solid #f5c6cb; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 10px; border-bottom: 1px solid #ddd; text-align: left; }
-        th { background: #f2f2f2; }
+        th, td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
+        th { background: #f8fafc; font-weight: 600; color: #0a2b38; }
+        tr:hover { background: #f8fafc; }
+        .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2edf2; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; }
+        .page-title { font-size: 1.6rem; font-weight: 700; color: #0a2b38; }
+        .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; border: 1px solid #dee9f0; }
     </style>
 </head>
 <body>
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-shield"></i></div>
+            <div class="avatar">
+    <?php if ($current_photo): ?>
+        <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+    <?php else: ?>
+        <i class="fas fa-user-shield"></i>
+    <?php endif; ?>
+</div>
+       
             <div class="welcome-text">Welcome,</div>
             <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
             <div class="user-role"><?php echo ($_SESSION['role'] == 'super_admin') ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
@@ -160,28 +201,52 @@ if (isset($_GET['edit'])) {
                 <strong>🏢 Departments</strong>
                 <button class="btn-primary" id="addDeptBtn"><i class="fas fa-plus"></i> Add Department</button>
             </div>
-            <table id="deptsTable">
-                <thead>
-                    <tr><th>ID</th><th>Department Name</th><th>Head of Department</th><th>Email</th><th>Tickets</th><th>Actions</th>
-                </thead>
-                <tbody>
-                    <?php foreach ($departments as $dept): ?>
-                    <tr>
-                        <td><?php echo $dept['id']; ?>侧
-                        <td><?php echo htmlspecialchars($dept['name']); ?>侧
-                        <td><?php echo htmlspecialchars($dept['head_of_department']); ?>侧
-                        <td><?php echo htmlspecialchars($dept['email']); ?>侧
-                        <td><?php echo $dept['ticket_count']; ?>侧
-                        <td>
-                            <a href="?edit=<?php echo $dept['id']; ?>" class="btn-primary" style="padding:4px 10px; text-decoration:none; display:inline-block;"><i class="fas fa-edit"></i> Edit</a>
-                            <a href="?delete=<?php echo $dept['id']; ?>" onclick="return confirm('Are you sure you want to delete this department?')" class="btn-danger" style="background:#c0392b; padding:4px 10px; text-decoration:none; color:white; border-radius:5px; display:inline-block;"><i class="fas fa-trash"></i> Delete</a>
-                        侧
+            
+            <?php if (empty($departments)): ?>
+                <div style="text-align: center; padding: 40px; color: #7f8c8d;">
+                    <i class="fas fa-building" style="font-size: 48px; margin-bottom: 10px; display: block;"></i>
+                    No departments found. Click "Add Department" to create one.
+                </div>
+            <?php else: ?>
+                <div style="overflow-x: auto;">
+                    <table id="deptsTable">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Department Name</th>
+                                <th>Head of Department</th>
+                                <th>Email</th>
+                                <th>Tickets</th>
+                                <th>Actions</th>
+                            </thead>
+                        <tbody>
+                            <?php foreach ($departments as $dept): ?>
+                            <tr>
+                                <td><?php echo $dept['id']; ?>侧
+                                <td><strong><?php echo htmlspecialchars($dept['name']); ?></strong>侧
+                                <td><?php echo htmlspecialchars($dept['head_of_department']); ?>侧
+                                <td><a href="mailto:<?php echo htmlspecialchars($dept['email']); ?>"><?php echo htmlspecialchars($dept['email']); ?></a>侧
+                                <td>
+                                    <?php if($dept['ticket_count'] > 0): ?>
+                                        <span class="status-badge" style="background:#e3f2fd; color:#1565c0;"><?php echo $dept['ticket_count']; ?> tickets</span>
+                                    <?php else: ?>
+                                        <span style="color:#94a3b8;">0 tickets</span>
+                                    <?php endif; ?>
+                                侧
+                                <td class="action-buttons">
+                                    <a href="?edit=<?php echo $dept['id']; ?>" class="btn-primary btn-sm" style="text-decoration:none; display:inline-block;">
+                                        <i class="fas fa-edit"></i> Edit
+                                    </a>
+                                    <a href="?delete=<?php echo $dept['id']; ?>" onclick="return confirm('Are you sure you want to delete this department? This action cannot be undone.')" class="btn-danger btn-sm" style="background:#c0392b; text-decoration:none; color:white; border-radius:5px; display:inline-block;">
+                                        <i class="fas fa-trash"></i> Delete
+                                    </a>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
                     </table>
-                    <?php endforeach; ?>
-                    <?php if (empty($departments)): ?>
-                        <tr><td colspan="6">No departments found.<?php endif; ?>
-                </tbody>
-            </table>
+                </div>
+            <?php endif; ?>
         </div>
     </main>
 </div>
@@ -190,14 +255,23 @@ if (isset($_GET['edit'])) {
 <div id="deptModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 id="deptModalTitle">Add Department</h3>
+            <h3 id="deptModalTitle"><i class="fas fa-plus-circle"></i> Add Department</h3>
             <span class="close-dept-modal">&times;</span>
         </div>
         <form id="deptForm" method="POST">
             <input type="hidden" name="action" value="add">
-            <div class="form-group"><label>Department Name</label><input type="text" name="name" id="deptName" required></div>
-            <div class="form-group"><label>Head of Department</label><input type="text" name="head" id="deptHead" required></div>
-            <div class="form-group"><label>Department Email</label><input type="email" name="email" id="deptEmail" required></div>
+            <div class="form-group">
+                <label>Department Name *</label>
+                <input type="text" name="name" id="deptName" placeholder="e.g., ICT Support, Finance Office" required>
+            </div>
+            <div class="form-group">
+                <label>Head of Department *</label>
+                <input type="text" name="head" id="deptHead" placeholder="e.g., Dr. John Mkono" required>
+            </div>
+            <div class="form-group">
+                <label>Department Email *</label>
+                <input type="email" name="email" id="deptEmail" placeholder="e.g., dept@iaa.ac.tz" required>
+            </div>
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <button type="button" class="btn-primary" id="cancelDeptModalBtn" style="background:#7f8c8d;">Cancel</button>
                 <button type="submit" class="btn-primary">Save Department</button>
@@ -211,15 +285,24 @@ if (isset($_GET['edit'])) {
 <div id="editDeptModal" class="modal" style="display: flex;">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Edit Department</h3>
+            <h3><i class="fas fa-edit"></i> Edit Department</h3>
             <a href="admin_departments.php" class="close-modal" style="text-decoration:none;">&times;</a>
         </div>
         <form method="POST">
             <input type="hidden" name="action" value="edit">
             <input type="hidden" name="id" value="<?php echo $edit_dept['id']; ?>">
-            <div class="form-group"><label>Department Name</label><input type="text" name="name" value="<?php echo htmlspecialchars($edit_dept['name']); ?>" required></div>
-            <div class="form-group"><label>Head of Department</label><input type="text" name="head" value="<?php echo htmlspecialchars($edit_dept['head_of_department']); ?>" required></div>
-            <div class="form-group"><label>Department Email</label><input type="email" name="email" value="<?php echo htmlspecialchars($edit_dept['email']); ?>" required></div>
+            <div class="form-group">
+                <label>Department Name *</label>
+                <input type="text" name="name" value="<?php echo htmlspecialchars($edit_dept['name']); ?>" required>
+            </div>
+            <div class="form-group">
+                <label>Head of Department *</label>
+                <input type="text" name="head" value="<?php echo htmlspecialchars($edit_dept['head_of_department']); ?>" required>
+            </div>
+            <div class="form-group">
+                <label>Department Email *</label>
+                <input type="email" name="email" value="<?php echo htmlspecialchars($edit_dept['email']); ?>" required>
+            </div>
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <a href="admin_departments.php" class="btn-primary" style="background:#7f8c8d; text-decoration:none;">Cancel</a>
                 <button type="submit" class="btn-primary">Update Department</button>
@@ -248,7 +331,7 @@ if (isset($_GET['edit'])) {
         });
     });
     
-    // Close modal when clicking outside
+    // Close add modal when clicking outside
     window.onclick = function(event) {
         if (event.target === modal) {
             modal.style.display = 'none';

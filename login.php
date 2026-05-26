@@ -93,7 +93,8 @@ session_start();
                     <select id="role" name="role" required>
                         <option value="student">🎓 Student</option>
                         <option value="lecturer">📚 Lecturer / Academic Staff</option>
-                        <option value="admin">⚙️ Administrator</option>
+                         <option value="super_admin">👑 Super Administrator</option>
+                        <option value="admin">⚙️ Admin</option>
                         <option value="finance">💰 Finance Office</option>
                         <option value="ict">💻 ICT Support</option>
                     </select>

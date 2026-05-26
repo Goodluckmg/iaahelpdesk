@@ -19,6 +19,12 @@ $logged_user_id = $_SESSION['student_id'];
 $logged_role = $_SESSION['role'];
 $is_super_admin = ($logged_role === 'super_admin');
 
+// Get profile photo
+$photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$admin_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $admin_data['profile_photo'] ?? null;
+
 // --- STATISTICS KUTOKA DATABASE ---
 $total_users = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM students"))['total'];
 $total_tickets = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM tickets"))['total'];
@@ -78,7 +84,8 @@ while ($row = mysqli_fetch_assoc($res2)) {
         .btn-primary:hover { background: #c0392b; }
         .sidebar { width: 280px; background: #0a1c2a; color: #e0edf5; display: flex; flex-direction: column; }
         .profile-area { padding: 25px 20px; text-align: center; }
-        .avatar { width: 70px; height: 70px; background: linear-gradient(135deg, #e74c3c, #c0392b); border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; }
+        .avatar { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .avatar i { font-size: 35px; color: white; }
         .nav-menu { flex: 1; padding: 15px; }
         .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 15px; border-radius: 10px; color: #cbdbe6; text-decoration: none; }
@@ -95,7 +102,13 @@ while ($row = mysqli_fetch_assoc($res2)) {
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-shield"></i></div>
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo">
+                <?php else: ?>
+                    <i class="fas fa-user-shield"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
             <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
             <div class="user-role"><?php echo $is_super_admin ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
@@ -141,7 +154,7 @@ while ($row = mysqli_fetch_assoc($res2)) {
                         <tr><td colspan="6">No tickets found.<?php else: ?>
                         <?php foreach ($recent_tickets as $t): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($t['ticket_no']); ?></td>
+                            <td><?php echo htmlspecialchars($t['ticket_no']); ?>侧
                             <td><?php echo htmlspecialchars($t['student_name'] ?? 'Unknown'); ?>侧
                             <td><?php echo htmlspecialchars(substr($t['title'], 0, 40)); ?>侧
                             <td><?php echo htmlspecialchars($t['department_name'] ?? 'Unassigned'); ?>侧

@@ -13,7 +13,7 @@ if ($_SESSION['role'] !== 'student') {
     exit();
 }
 
-require_once '../config/database.php';
+require_once 'config/database.php';
 
 $student_id = $_SESSION['student_id'];
 $fullname = $_SESSION['fullname'];
@@ -53,7 +53,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IAA Startup Hub | Fursa, Mawazo & Innovation</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="../css/statup.css">
+    <link rel="stylesheet" href="css/statup.css">
     <style>
         .tab-content { display: none; }
         .tab-content.active { display: block; }
@@ -91,7 +91,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
             <a href="student_edit-photo.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
             <a href="student_startup.php" class="nav-item active"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
             <a href="student_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
-            <div class="logout-item"><a href="../logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <div class="logout-item"><a href="logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 

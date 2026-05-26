@@ -13,7 +13,7 @@ if ($_SESSION['role'] !== 'student') {
     exit();
 }
 
-require_once '../config/database.php';
+require_once 'config/database.php';
 
 $student_id = $_SESSION['student_id'];
 $fullname = $_SESSION['fullname'];
@@ -51,7 +51,7 @@ $current_photo = $student['profile_photo'];
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IAA Student Helpdesk | Edit Profile Photo</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="css/style.css">
     <style>
         .edit-photo-wrapper { max-width: 550px; margin: 0 auto; }
         .user-info-card { text-align: center; margin-bottom: 30px; padding: 20px; background: white; border-radius: 20px; border: 1px solid #e2edf2; }
@@ -93,7 +93,7 @@ $current_photo = $student['profile_photo'];
             <a href="student_edit-photo.php" class="nav-item active"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
             <a href="student_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
             <a href="student_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
-            <div class="logout-item"><a href="../logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <div class="logout-item"><a href="logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 

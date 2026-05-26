@@ -25,7 +25,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
     $allowed_types = ['image/jpeg', 'image/png', 'image/jpg'];
     
     if (in_array($file['type'], $allowed_types) && $file['size'] <= 1 * 1024 * 1024) {
-        // Convert image to base64 for storage (or save to file)
+        // Convert image to base64 for storage
         $image_data = base64_encode(file_get_contents($file['tmp_name']));
         $update_query = "UPDATE students SET profile_photo = '$image_data' WHERE id = $admin_id";
         
@@ -95,7 +95,13 @@ $current_photo = $admin_data['profile_photo'] ?? null;
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-shield"></i></div>
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                <?php else: ?>
+                    <i class="fas fa-user-shield"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
             <div class="user-name"><?php echo htmlspecialchars($admin_name); ?></div>
             <div class="user-role"><?php echo ($_SESSION['role'] == 'super_admin') ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
@@ -135,18 +141,10 @@ $current_photo = $admin_data['profile_photo'] ?? null;
             </div>
 
             <div class="photo-preview-card">
-                <div class="photo-preview-label"><i class="fas fa-image"></i> Current Profile Photo</div>
-                <div class="photo-circle-preview">
-                    <?php if ($current_photo): ?>
-                        <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo" id="previewImage">
-                    <?php else: ?>
-                        <img src="https://ui-avatars.com/api/?background=e74c3c&color=fff&size=150&name=<?php echo urlencode($admin_name); ?>" alt="Profile Photo" id="previewImage">
-                    <?php endif; ?>
-                </div>
-            </div>
+                 
+                 
 
-            <div class="isms-info"><i class="fas fa-shield-alt"></i> Required format PNG, JPG & JPEG Only (size less than 1 MB)</div>
-
+            
             <form method="POST" action="" enctype="multipart/form-data">
                 <div class="upload-card">
                     <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>

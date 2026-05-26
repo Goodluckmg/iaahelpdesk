@@ -15,6 +15,10 @@ if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
 
 require_once 'config/database.php';
 
+// ========== ADD THIS LINE ==========
+$logged_user_id = $_SESSION['student_id'];
+// ===================================
+
 // Create settings table if not exists
 $create_table = "
 CREATE TABLE IF NOT EXISTS system_settings (
@@ -55,6 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     header("Location: admin_settings.php");
     exit();
 }
+
+// Get profile photo
+$photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$admin_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $admin_data['profile_photo'] ?? null;
 
 // Handle clear all data
 if (isset($_GET['clear_data'])) {
@@ -101,13 +111,22 @@ $maintenance_mode = $settings['maintenance_mode'] ?? 'off';
         .message-success { background: #d9f0e5; color: #1d6f42; }
         .message-error { background: #fde8e8; color: #c0392b; }
         hr { margin: 20px 0; border: none; border-top: 1px solid #e2edf2; }
+        .avatar { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar i { font-size: 35px; color: white; }
     </style>
 </head>
 <body>
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-shield"></i></div>
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo">
+                <?php else: ?>
+                    <i class="fas fa-user-shield"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
             <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
             <div class="user-role"><?php echo ($_SESSION['role'] == 'super_admin') ? '👑 Super Admin' : '⚙️ Admin'; ?></div>

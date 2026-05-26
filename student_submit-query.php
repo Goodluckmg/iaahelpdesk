@@ -3,17 +3,17 @@ session_start();
 
 // Check if user is logged in
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: ../login.php");
+    header("Location: login.php");
     exit();
 }
 
 // Check if user has student role
 if ($_SESSION['role'] !== 'student') {
-    header("Location: ../" . $_SESSION['role'] . "/dashboard.php");
+    header("Location: " . $_SESSION['role'] . "_dashboard.php");
     exit();
 }
 
-require_once '../config/database.php';
+require_once 'config/database.php';
 
 $student_id = $_SESSION['student_id'];
 $fullname = $_SESSION['fullname'];
@@ -45,15 +45,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_query'])) {
         $allowed = ['image/jpeg', 'image/png', 'image/jpg', 'application/pdf'];
         
         if (in_array($file['type'], $allowed) && $file['size'] <= 2 * 1024 * 1024) {
-            $upload_dir = '../uploads/';
+            $upload_dir = 'uploads/';  // ✅ SAHIHI
+            
             if (!file_exists($upload_dir)) {
                 mkdir($upload_dir, 0777, true);
             }
+            
             $document_name = time() . '_' . preg_replace('/[^a-zA-Z0-9._-]/', '', $file['name']);
             $document_path = 'uploads/' . $document_name;
-            move_uploaded_file($file['tmp_name'], $upload_dir . $document_name);
-            $has_document = 1;
-            $document_type = $file['type'];
+            
+            if (move_uploaded_file($file['tmp_name'], $upload_dir . $document_name)) {
+                $has_document = 1;
+                $document_type = $file['type'];
+            } else {
+                $error_message = "Failed to upload document. Please check folder permissions.";
+            }
+        } else {
+            $error_message = "Invalid file type or file too large. Max 2MB, allowed: JPG, PNG, PDF.";
         }
     }
     
@@ -61,8 +69,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_query'])) {
                      VALUES ('$ticket_no', '$student_id', '$title', '$category', '$department_id', '$priority', '$description', '$has_document', '$document_name', '$document_path', '$document_type', 'open')";
     
     if (mysqli_query($conn, $insert_query)) {
-        $success_message = "✅ Query submitted successfully! Ticket No: $ticket_no";
-        // Clear form - redirect to my queries
         header("Location: student_my-queries.php?success=1");
         exit();
     } else {
@@ -78,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_query'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IAA Student Helpdesk | Submit Query</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="css/style.css">
     <style>
         .document-upload-section {
             background: #f8fafc;
@@ -118,7 +124,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_query'])) {
             <a href="student_edit-photo.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
             <a href="student_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
             <a href="student_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
-            <div class="logout-item"><a href="../logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <div class="logout-item"><a href="logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 

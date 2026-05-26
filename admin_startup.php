@@ -15,6 +15,16 @@ if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
 
 require_once 'config/database.php';
 
+// ========== ADD THIS LINE ==========
+$logged_user_id = $_SESSION['student_id'];
+// ===================================
+
+// Get profile photo
+$photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$admin_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $admin_data['profile_photo'] ?? null;
+
 // Create tables if not exists
 $create_ideas_table = "
 CREATE TABLE IF NOT EXISTS startup_ideas (
@@ -164,7 +174,13 @@ $total_opportunities = count($opportunities);
 <div class="app-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-user-shield"></i></div>
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                <?php else: ?>
+                    <i class="fas fa-user-shield"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
             <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
             <div class="user-role"><?php echo ($_SESSION['role'] == 'super_admin') ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
@@ -215,7 +231,7 @@ $total_opportunities = count($opportunities);
             </div>
             <div id="ideasListContainer">
                 <?php foreach ($ideas as $idea): ?>
-                <div class="idea-card" data-status="<?php echo $idea['status']; ?>" data-category="<?php echo $idea['category']; ?>" data-title="<?php echo strtolower($idea['title']); ?>">
+                <div class="idea-card" data-status="<?php echo $idea['status']; ?>" data-category="<?php echo $idea['category']; ?>">
                     <div class="card-header">
                         <strong>#<?php echo $idea['id']; ?> - <?php echo htmlspecialchars($idea['title']); ?></strong>
                         <span class="status-badge-<?php echo $idea['status'] == 'pending' ? 'pending' : ($idea['status'] == 'approved' ? 'approved' : 'rejected'); ?>">
@@ -294,13 +310,6 @@ $total_opportunities = count($opportunities);
     let ideasChart = null, opportunitiesChart = null;
     let allIdeas = <?php echo json_encode($ideas); ?>;
     let allOpportunities = <?php echo json_encode($opportunities); ?>;
-
-    function updateStats() {
-        document.getElementById('totalIdeas').innerText = allIdeas.length;
-        document.getElementById('pendingIdeas').innerText = allIdeas.filter(i => i.status === 'pending').length;
-        document.getElementById('approvedIdeas').innerText = allIdeas.filter(i => i.status === 'approved').length;
-        document.getElementById('totalOpportunities').innerText = allOpportunities.length;
-    }
 
     function filterAndRenderIdeas() {
         const statusFilter = document.getElementById('filterIdeaStatus').value;

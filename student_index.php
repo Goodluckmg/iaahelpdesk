@@ -3,13 +3,13 @@ session_start();
 
 // Check if user is logged in
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: ../login.php");
+    header("Location: login.php");
     exit();
 }
 
 // Check if user has student role
 if ($_SESSION['role'] !== 'student') {
-    header("Location: ../" . $_SESSION['role'] . "/dashboard.php");
+    header("Location: " . $_SESSION['role'] . "_dashboard.php");
     exit();
 }
 
@@ -37,7 +37,7 @@ $recent_query = "SELECT id, ticket_no, title, department_id, status, created_at
 $recent_result = mysqli_query($conn, $recent_query);
 
 // Get department names
-$dept_query = "SELECT id, name FROM departments";
+$dept_query = "SELECT id, name FROM departments WHERE status = 'active'";
 $dept_result = mysqli_query($conn, $dept_query);
 $departments = [];
 while($dept = mysqli_fetch_assoc($dept_result)) {
@@ -51,12 +51,9 @@ while($dept = mysqli_fetch_assoc($dept_result)) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IAA Student Helpdesk | Dashboard</title>
-    <!-- Font Awesome Icons - CDN (no change) -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <!-- Chart.js - CDN (no change) -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <!-- CSS - PATH CHANGED from css/style.css to ../css/style.css -->
-    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 <div class="app-container">
@@ -76,7 +73,7 @@ while($dept = mysqli_fetch_assoc($dept_result)) {
             <a href="student_edit-photo.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
             <a href="student_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
             <a href="student_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
-            <div class="logout-item"><a href="../logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <div class="logout-item"><a href="logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 
@@ -88,10 +85,10 @@ while($dept = mysqli_fetch_assoc($dept_result)) {
 
         <!-- STATS CARDS -->
         <div class="stats-row">
-            <div class="stat-card"><i class="fas fa-clock"></i><div class="stat-number"><?php echo $stats['open_count']; ?></div><div>Open Queries</div></div>
-            <div class="stat-card"><i class="fas fa-spinner"></i><div class="stat-number"><?php echo $stats['progress_count']; ?></div><div>In Progress</div></div>
-            <div class="stat-card"><i class="fas fa-check-circle"></i><div class="stat-number"><?php echo $stats['resolved_count']; ?></div><div>Resolved</div></div>
-            <div class="stat-card"><i class="fas fa-tachometer-alt"></i><div class="stat-number"><?php echo $stats['total_count']; ?></div><div>Total Queries</div></div>
+            <div class="stat-card"><i class="fas fa-clock"></i><div class="stat-number"><?php echo $stats['open_count'] ?? 0; ?></div><div>Open Queries</div></div>
+            <div class="stat-card"><i class="fas fa-spinner"></i><div class="stat-number"><?php echo $stats['progress_count'] ?? 0; ?></div><div>In Progress</div></div>
+            <div class="stat-card"><i class="fas fa-check-circle"></i><div class="stat-number"><?php echo $stats['resolved_count'] ?? 0; ?></div><div>Resolved</div></div>
+            <div class="stat-card"><i class="fas fa-tachometer-alt"></i><div class="stat-number"><?php echo $stats['total_count'] ?? 0; ?></div><div>Total Queries</div></div>
         </div>
 
         <!-- RECENT QUERIES -->
@@ -102,19 +99,19 @@ while($dept = mysqli_fetch_assoc($dept_result)) {
             </div>
             <table>
                 <thead>
-                    <tr><th>ID</th><th>Subject</th><th>Department</th><th>Status</th><th>Date</th></tr>
+                    <tr><th>Ticket No</th><th>Subject</th><th>Department</th><th>Status</th><th>Date</th></tr>
                 </thead>
                 <tbody>
                     <?php if(mysqli_num_rows($recent_result) == 0): ?>
-                    <tr>
-                        <td colspan="5" style="text-align: center;">No queries yet. <a href="student_submit-query.php">Submit your first query</a></td>
-                    </tr>
+                        <tr>
+                            <td colspan="5" style="text-align: center;">No queries yet. <a href="student_submit-query.php">Submit your first query</a>侧
+                        </tr>
                     <?php else: ?>
                         <?php while($ticket = mysqli_fetch_assoc($recent_result)): ?>
                         <tr>
-                            <td>#<?php echo $ticket['ticket_no']; ?>侧
+                            <td><?php echo htmlspecialchars($ticket['ticket_no']); ?>侧
                             <td><?php echo htmlspecialchars(substr($ticket['title'], 0, 40)); ?>侧
-                            <td><?php echo isset($departments[$ticket['department_id']]) ? $departments[$ticket['department_id']] : 'Unknown'; ?>侧
+                            <td><?php echo isset($departments[$ticket['department_id']]) ? htmlspecialchars($departments[$ticket['department_id']]) : 'Unknown'; ?>侧
                             <td><span class="status-badge <?php echo $ticket['status'] == 'resolved' ? 'status-resolved' : ''; ?>"><?php echo ucfirst(str_replace('_', ' ', $ticket['status'])); ?></span>侧
                             <td><?php echo date('d/m/Y', strtotime($ticket['created_at'])); ?>侧
                         </tr>
@@ -133,7 +130,6 @@ while($dept = mysqli_fetch_assoc($dept_result)) {
 </div>
 
 <script>
-    // Set current date
     function setCurrentDate() {
         const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
         const dateElement = document.getElementById('currentDate');
