@@ -1,3 +1,130 @@
+<?php
+session_start();
+
+// 1. Angalia kama ameingia
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header("Location: login.php");
+    exit();
+}
+
+// 2. Angalia kama ana role ya admin (super_admin au admin)
+if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
+    header("Location: student_dashboard.php");
+    exit();
+}
+
+require_once 'config/database.php';
+
+// Create tables if not exists
+$create_ideas_table = "
+CREATE TABLE IF NOT EXISTS startup_ideas (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    user_id INT(11) NOT NULL,
+    student_name VARCHAR(100) DEFAULT NULL,
+    student_reg VARCHAR(50) DEFAULT NULL,
+    title VARCHAR(200) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    description TEXT NOT NULL,
+    resources_needed TEXT DEFAULT NULL,
+    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
+    admin_comment TEXT DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_user_id (user_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+mysqli_query($conn, $create_ideas_table);
+
+$create_opportunities_table = "
+CREATE TABLE IF NOT EXISTS startup_opportunities (
+    id INT(11) NOT NULL AUTO_INCREMENT,
+    title VARCHAR(200) NOT NULL,
+    type ENUM('job', 'training', 'internship') NOT NULL,
+    category VARCHAR(50) DEFAULT NULL,
+    description TEXT NOT NULL,
+    deadline DATE DEFAULT NULL,
+    contact_info VARCHAR(200) DEFAULT NULL,
+    status ENUM('active', 'expired', 'closed') DEFAULT 'active',
+    created_by INT(11) DEFAULT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (id),
+    INDEX idx_type (type),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
+mysqli_query($conn, $create_opportunities_table);
+
+// Handle idea status update (approve/reject)
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+    if ($_POST['action'] === 'update_idea_status') {
+        $idea_id = intval($_POST['idea_id']);
+        $new_status = mysqli_real_escape_string($conn, $_POST['status']);
+        $admin_comment = mysqli_real_escape_string($conn, $_POST['admin_comment']);
+        
+        $update = "UPDATE startup_ideas SET status = '$new_status', admin_comment = '$admin_comment' WHERE id = $idea_id";
+        if (mysqli_query($conn, $update)) {
+            echo 'success';
+        } else {
+            echo 'error';
+        }
+        exit();
+    }
+    
+    // Handle add opportunity
+    if ($_POST['action'] === 'add_opportunity') {
+        $title = mysqli_real_escape_string($conn, $_POST['title']);
+        $type = mysqli_real_escape_string($conn, $_POST['type']);
+        $category = mysqli_real_escape_string($conn, $_POST['category']);
+        $description = mysqli_real_escape_string($conn, $_POST['description']);
+        $contact = mysqli_real_escape_string($conn, $_POST['contact']);
+        $deadline = mysqli_real_escape_string($conn, $_POST['deadline']);
+        $created_by = $_SESSION['student_id'];
+        
+        $insert = "INSERT INTO startup_opportunities (title, type, category, description, deadline, contact_info, created_by) 
+                   VALUES ('$title', '$type', '$category', '$description', '$deadline', '$contact', '$created_by')";
+        if (mysqli_query($conn, $insert)) {
+            echo 'success';
+        } else {
+            echo 'error';
+        }
+        exit();
+    }
+    
+    // Handle delete opportunity
+    if ($_POST['action'] === 'delete_opportunity') {
+        $opp_id = intval($_POST['opp_id']);
+        $delete = "DELETE FROM startup_opportunities WHERE id = $opp_id";
+        if (mysqli_query($conn, $delete)) {
+            echo 'success';
+        } else {
+            echo 'error';
+        }
+        exit();
+    }
+}
+
+// Fetch ideas from database
+$ideas_query = "SELECT * FROM startup_ideas ORDER BY created_at DESC";
+$ideas_result = mysqli_query($conn, $ideas_query);
+$ideas = [];
+while ($row = mysqli_fetch_assoc($ideas_result)) {
+    $ideas[] = $row;
+}
+
+// Fetch opportunities from database
+$opp_query = "SELECT * FROM startup_opportunities WHERE status = 'active' ORDER BY created_at DESC";
+$opp_result = mysqli_query($conn, $opp_query);
+$opportunities = [];
+while ($row = mysqli_fetch_assoc($opp_result)) {
+    $opportunities[] = $row;
+}
+
+// Get counts for stats
+$total_ideas = count($ideas);
+$pending_ideas = count(array_filter($ideas, function($i) { return $i['status'] === 'pending'; }));
+$approved_ideas = count(array_filter($ideas, function($i) { return $i['status'] === 'approved'; }));
+$total_opportunities = count($opportunities);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -8,26 +135,11 @@
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
     <link rel="stylesheet" href="css/admin.css">
     <style>
-        /* Additional styles for admin startup hub */
-        .startup-stats-row {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 20px;
-            margin-bottom: 25px;
-        }
-        .idea-card, .opportunity-card {
-            background: white;
-            border-radius: 16px;
-            padding: 18px;
-            margin-bottom: 15px;
-            border: 1px solid #e2edf2;
-        }
-        .card-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
+        .startup-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
+        .stat-card { background: white; border-radius: 20px; padding: 18px; border-left: 4px solid #e74c3c; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .stat-number { font-size: 1.8rem; font-weight: 800; color: #c0392b; margin-top: 5px; }
+        .idea-card, .opportunity-card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 15px; border: 1px solid #e2edf2; }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
         .status-badge-pending { background: #fff3e0; color: #b45f06; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; }
         .status-badge-approved { background: #d9f0e5; color: #1d6f42; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; }
         .status-badge-rejected { background: #fde8e8; color: #c0392b; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; }
@@ -39,6 +151,13 @@
         .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .tab-btn.active { background: #e74c3c; color: white; }
         .tab-btn:hover:not(.active) { background: #fde8e8; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
+        .modal-content { background: white; border-radius: 20px; padding: 25px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .close-modal { cursor: pointer; font-size: 1.5rem; color: #7f8c8d; }
+        .close-modal:hover { color: #c0392b; }
+        .btn-success { background: #27ae60; color: white; border: none; padding: 8px 16px; border-radius: 30px; cursor: pointer; }
+        .btn-danger { background: #c0392b; color: white; border: none; padding: 8px 16px; border-radius: 30px; cursor: pointer; }
     </style>
 </head>
 <body>
@@ -47,12 +166,12 @@
         <div class="profile-area">
             <div class="avatar"><i class="fas fa-user-shield"></i></div>
             <div class="welcome-text">Welcome,</div>
-            <div class="user-name" id="adminName">Administrator</div>
-            <div class="user-role">⚙️ Super Admin</div>
-            <div class="user-id" id="adminId">ADMIN/001</div>
+            <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
+            <div class="user-role"><?php echo ($_SESSION['role'] == 'super_admin') ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
+            <div class="user-id"><?php echo htmlspecialchars($_SESSION['reg_no']); ?></div>
         </div>
         <div class="nav-menu">
-            <a href="admin.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
+            <a href="admin_dashboard.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
             <a href="admin_users_management.php" class="nav-item"><i class="fas fa-users"></i><span class="nav-label">User Management</span></a>
             <a href="admin_tickets_view.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">All Tickets</span></a>
             <a href="admin_departments.php" class="nav-item"><i class="fas fa-building"></i><span class="nav-label">Departments</span></a>
@@ -60,49 +179,64 @@
             <a href="admin_startup.php" class="nav-item active"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
             <a href="admin_analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Analytics</span></a>
             <a href="admin_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">System Settings</span></a>
-            <div class="logout-item"><a href="../login.html" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 
     <main class="main-content">
         <div class="top-bar">
             <h1 class="page-title">Startup Hub Management</h1>
-            <div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
+            <div class="date-badge"><i class="far fa-calendar-alt"></i> <?php echo date('D, M j, Y'); ?></div>
         </div>
 
-        <!-- Statistics Cards -->
         <div class="startup-stats-row">
-            <div class="stat-card"><i class="fas fa-lightbulb"></i><div class="stat-number" id="totalIdeas">0</div><div>Total Ideas</div></div>
-            <div class="stat-card"><i class="fas fa-clock"></i><div class="stat-number" id="pendingIdeas">0</div><div>Pending Review</div></div>
-            <div class="stat-card"><i class="fas fa-check-circle"></i><div class="stat-number" id="approvedIdeas">0</div><div>Approved</div></div>
-            <div class="stat-card"><i class="fas fa-briefcase"></i><div class="stat-number" id="totalOpportunities">0</div><div>Opportunities</div></div>
+            <div class="stat-card"><i class="fas fa-lightbulb"></i><div class="stat-number"><?php echo $total_ideas; ?></div><div>Total Ideas</div></div>
+            <div class="stat-card"><i class="fas fa-clock"></i><div class="stat-number"><?php echo $pending_ideas; ?></div><div>Pending Review</div></div>
+            <div class="stat-card"><i class="fas fa-check-circle"></i><div class="stat-number"><?php echo $approved_ideas; ?></div><div>Approved</div></div>
+            <div class="stat-card"><i class="fas fa-briefcase"></i><div class="stat-number"><?php echo $total_opportunities; ?></div><div>Opportunities</div></div>
         </div>
 
-        <!-- Tabs Navigation -->
         <div class="startup-tabs">
             <button class="tab-btn active" data-tab="ideas"><i class="fas fa-lightbulb"></i> Student Ideas</button>
             <button class="tab-btn" data-tab="opportunities"><i class="fas fa-briefcase"></i> Opportunities</button>
             <button class="tab-btn" data-tab="statistics"><i class="fas fa-chart-line"></i> Statistics</button>
         </div>
 
-        <!-- TAB 1: Student Ideas Management -->
+        <!-- TAB 1: Student Ideas -->
         <div id="ideasTab" class="tab-content">
             <div class="form-container">
                 <h3><i class="fas fa-filter"></i> Filter Ideas</h3>
                 <div class="form-row">
-                    <div class="form-group"><label>Status</label><select id="filterIdeaStatus" class="form-control"><option value="all">All</option><option value="Pending Review">Pending</option><option value="Approved">Approved</option><option value="Rejected">Rejected</option></select></div>
-                    <div class="form-group"><label>Category</label><select id="filterIdeaCategory" class="form-control"><option value="all">All Categories</option><option value="Teknolojia">Technology</option><option value="Kilimo">Agriculture</option><option value="Biashara">Business</option><option value="Huduma">Services</option></select></div>
-                    <div class="form-group"><label>Search</label><input type="text" id="searchIdea" placeholder="Search by title or student..."></div>
+                    <div class="form-group"><label>Status</label><select id="filterIdeaStatus"><option value="all">All</option><option value="pending">Pending</option><option value="approved">Approved</option><option value="rejected">Rejected</option></select></div>
+                    <div class="form-group"><label>Category</label><select id="filterIdeaCategory"><option value="all">All Categories</option><option value="Teknolojia">Technology</option><option value="Kilimo">Agriculture</option><option value="Biashara">Business</option></select></div>
+                    <div class="form-group"><label>Search</label><input type="text" id="searchIdea" placeholder="Search by title..."></div>
                 </div>
                 <button class="btn-primary" id="refreshIdeasBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
             </div>
-            <div id="ideasListContainer"></div>
+            <div id="ideasListContainer">
+                <?php foreach ($ideas as $idea): ?>
+                <div class="idea-card" data-status="<?php echo $idea['status']; ?>" data-category="<?php echo $idea['category']; ?>" data-title="<?php echo strtolower($idea['title']); ?>">
+                    <div class="card-header">
+                        <strong>#<?php echo $idea['id']; ?> - <?php echo htmlspecialchars($idea['title']); ?></strong>
+                        <span class="status-badge-<?php echo $idea['status'] == 'pending' ? 'pending' : ($idea['status'] == 'approved' ? 'approved' : 'rejected'); ?>">
+                            <?php echo ucfirst($idea['status']); ?>
+                        </span>
+                    </div>
+                    <div><small><i class="fas fa-user"></i> <?php echo htmlspecialchars($idea['student_name']); ?> | <i class="fas fa-tag"></i> <?php echo htmlspecialchars($idea['category']); ?></small></div>
+                    <p style="margin-top:10px;"><?php echo htmlspecialchars(substr($idea['description'], 0, 100)); ?>...</p>
+                    <button class="btn-primary btn-sm view-idea" data-id="<?php echo $idea['id']; ?>"><i class="fas fa-eye"></i> View & Review</button>
+                </div>
+                <?php endforeach; ?>
+                <?php if (empty($ideas)): ?>
+                <div class="widget-card" style="text-align:center;">No ideas submitted yet</div>
+                <?php endif; ?>
+            </div>
         </div>
 
-        <!-- TAB 2: Opportunities Management -->
-        <div id="opportunitiesTab" class="tab-content" style="display: none;">
+        <!-- TAB 2: Opportunities -->
+        <div id="opportunitiesTab" class="tab-content" style="display:none;">
             <div class="form-container">
-                <div class="flex-between"><h3><i class="fas fa-plus-circle"></i> Add New Opportunity</h3></div>
+                <h3><i class="fas fa-plus-circle"></i> Add New Opportunity</h3>
                 <div class="form-row">
                     <div class="form-group"><label>Title</label><input type="text" id="oppTitle" placeholder="e.g., Digital Marketing Training"></div>
                     <div class="form-group"><label>Type</label><select id="oppType"><option value="job">Job / Short Term</option><option value="training">Training</option><option value="internship">Internship</option></select></div>
@@ -115,24 +249,39 @@
                 </div>
                 <button class="btn-primary" id="addOpportunityBtn"><i class="fas fa-save"></i> Add Opportunity</button>
             </div>
-            <div class="flex-between" style="margin: 15px 0;"><h3><i class="fas fa-list"></i> Current Opportunities</h3><button class="btn-primary" id="refreshOppBtn"><i class="fas fa-sync-alt"></i> Refresh</button></div>
-            <div id="opportunitiesListContainer"></div>
+            <div style="margin:15px 0;"><button class="btn-primary" id="refreshOppBtn"><i class="fas fa-sync-alt"></i> Refresh Opportunities</button></div>
+            <div id="opportunitiesListContainer">
+                <?php foreach ($opportunities as $opp): ?>
+                <div class="opportunity-card">
+                    <div class="card-header">
+                        <strong><?php echo htmlspecialchars($opp['title']); ?></strong>
+                        <span class="status-badge-approved"><?php echo ucfirst($opp['type']); ?></span>
+                    </div>
+                    <div><small><i class="fas fa-calendar"></i> Deadline: <?php echo $opp['deadline']; ?> | <i class="fas fa-envelope"></i> <?php echo htmlspecialchars($opp['contact_info']); ?></small></div>
+                    <p><?php echo htmlspecialchars(substr($opp['description'], 0, 100)); ?></p>
+                    <button class="btn-danger btn-sm delete-opp" data-id="<?php echo $opp['id']; ?>"><i class="fas fa-trash"></i> Delete</button>
+                </div>
+                <?php endforeach; ?>
+                <?php if (empty($opportunities)): ?>
+                <div class="widget-card" style="text-align:center;">No opportunities available</div>
+                <?php endif; ?>
+            </div>
         </div>
 
         <!-- TAB 3: Statistics -->
-        <div id="statisticsTab" class="tab-content" style="display: none;">
-            <div class="widget-card"><canvas id="ideasChart" width="400" height="200" style="max-height: 250px;"></canvas></div>
-            <div class="widget-card"><canvas id="opportunitiesChart" width="400" height="200" style="max-height: 250px;"></canvas></div>
+        <div id="statisticsTab" class="tab-content" style="display:none;">
+            <div class="widget-card"><canvas id="ideasChart" width="400" height="200" style="max-height:250px;"></canvas></div>
+            <div class="widget-card"><canvas id="opportunitiesChart" width="400" height="200" style="max-height:250px;"></canvas></div>
         </div>
     </main>
 </div>
 
-<!-- MODAL FOR VIEWING IDEA DETAILS -->
+<!-- Modal for Viewing Idea -->
 <div id="ideaModal" class="modal">
     <div class="modal-content">
         <div class="modal-header"><h3>Idea Details</h3><span class="close-modal">&times;</span></div>
         <div id="ideaDetails"></div>
-        <div class="form-group" style="margin-top:15px;"><label>Admin Comments</label><textarea id="adminComment" rows="3" placeholder="Add feedback for the student..."></textarea></div>
+        <div class="form-group" style="margin-top:15px;"><label>Admin Comments</label><textarea id="adminComment" rows="3" placeholder="Add feedback..."></textarea></div>
         <div style="display:flex; gap:10px; margin-top:15px;">
             <button class="btn-success" id="approveIdeaBtn"><i class="fas fa-check"></i> Approve</button>
             <button class="btn-danger" id="rejectIdeaBtn"><i class="fas fa-times"></i> Reject</button>
@@ -141,59 +290,27 @@
 </div>
 
 <script>
-    // ============================================
-    // ADMIN STARTUP HUB MANAGEMENT
-    // ============================================
-
     let currentIdeaId = null;
     let ideasChart = null, opportunitiesChart = null;
-
-    // Demo data
-    let ideas = [
-        { id: 1, studentName: 'John Student', studentReg: 'IAA/2024/0789', title: 'Mobile App for Food Delivery', category: 'Teknolojia', description: 'App ya kuagiza chakula kwa students', need: 'Capital and Developer', status: 'Pending Review', submittedDate: '2024-06-01', adminComment: '' },
-        { id: 2, studentName: 'Mary Student', studentReg: 'IAA/2024/0456', title: 'Organic Farming Project', category: 'Kilimo', description: 'Kulima mboga na matunda kwa kutumia greenhouse', need: 'Land and Equipment', status: 'Pending Review', submittedDate: '2024-05-28', adminComment: '' },
-        { id: 3, studentName: 'Peter Student', studentReg: 'IAA/2024/0890', title: 'Online Tutoring Platform', category: 'Teknolojia', description: 'Platform ya kutoa mafunzo online kwa wanafunzi', need: 'Developers', status: 'Approved', submittedDate: '2024-05-20', adminComment: 'Good idea! We can support with mentorship.' }
-    ];
-
-    let opportunities = [
-        { id: 1, title: 'Digital Marketing Training', type: 'training', category: 'training', description: 'Mafunzo ya masaa 40 kuhusu Digital Marketing', deadline: '2024-07-15', contact: 'info@iaa.ac.tz', createdAt: '2024-06-01' },
-        { id: 2, title: 'Data Entry Clerk', type: 'job', category: 'job', description: 'Nafasi ya kazi ya muda (3 months)', deadline: '2024-06-20', contact: 'hr@iaa.ac.tz', createdAt: '2024-06-01' }
-    ];
-
-    let nextIdeaId = 4;
-    let nextOppId = 3;
-
-    // Load data from localStorage
-    function loadData() {
-        const savedIdeas = localStorage.getItem('admin_startup_ideas');
-        const savedOpportunities = localStorage.getItem('admin_startup_opportunities');
-        if (savedIdeas) ideas = JSON.parse(savedIdeas);
-        if (savedOpportunities) opportunities = JSON.parse(savedOpportunities);
-        updateStats();
-        renderIdeas();
-        renderOpportunities();
-        renderCharts();
-    }
-
-    function saveIdeas() { localStorage.setItem('admin_startup_ideas', JSON.stringify(ideas)); }
-    function saveOpportunities() { localStorage.setItem('admin_startup_opportunities', JSON.stringify(opportunities)); }
+    let allIdeas = <?php echo json_encode($ideas); ?>;
+    let allOpportunities = <?php echo json_encode($opportunities); ?>;
 
     function updateStats() {
-        document.getElementById('totalIdeas').innerText = ideas.length;
-        document.getElementById('pendingIdeas').innerText = ideas.filter(i => i.status === 'Pending Review').length;
-        document.getElementById('approvedIdeas').innerText = ideas.filter(i => i.status === 'Approved').length;
-        document.getElementById('totalOpportunities').innerText = opportunities.length;
+        document.getElementById('totalIdeas').innerText = allIdeas.length;
+        document.getElementById('pendingIdeas').innerText = allIdeas.filter(i => i.status === 'pending').length;
+        document.getElementById('approvedIdeas').innerText = allIdeas.filter(i => i.status === 'approved').length;
+        document.getElementById('totalOpportunities').innerText = allOpportunities.length;
     }
 
-    function renderIdeas() {
+    function filterAndRenderIdeas() {
         const statusFilter = document.getElementById('filterIdeaStatus').value;
         const categoryFilter = document.getElementById('filterIdeaCategory').value;
         const searchTerm = document.getElementById('searchIdea').value.toLowerCase();
         
-        let filtered = ideas;
+        let filtered = allIdeas;
         if (statusFilter !== 'all') filtered = filtered.filter(i => i.status === statusFilter);
         if (categoryFilter !== 'all') filtered = filtered.filter(i => i.category === categoryFilter);
-        if (searchTerm) filtered = filtered.filter(i => i.title.toLowerCase().includes(searchTerm) || i.studentName.toLowerCase().includes(searchTerm));
+        if (searchTerm) filtered = filtered.filter(i => i.title.toLowerCase().includes(searchTerm));
         
         const container = document.getElementById('ideasListContainer');
         if (filtered.length === 0) { container.innerHTML = '<div class="widget-card" style="text-align:center;">No ideas found</div>'; return; }
@@ -201,12 +318,12 @@
         container.innerHTML = filtered.map(idea => `
             <div class="idea-card">
                 <div class="card-header">
-                    <strong>#${idea.id} - ${idea.title}</strong>
-                    <span class="${idea.status === 'Pending Review' ? 'status-badge-pending' : idea.status === 'Approved' ? 'status-badge-approved' : 'status-badge-rejected'}">${idea.status}</span>
+                    <strong>#${idea.id} - ${escapeHtml(idea.title)}</strong>
+                    <span class="status-badge-${idea.status === 'pending' ? 'pending' : (idea.status === 'approved' ? 'approved' : 'rejected')}">${idea.status.charAt(0).toUpperCase() + idea.status.slice(1)}</span>
                 </div>
-                <div><small><i class="fas fa-user"></i> ${idea.studentName} (${idea.studentReg}) | <i class="fas fa-tag"></i> ${idea.category} | <i class="fas fa-calendar"></i> ${idea.submittedDate}</small></div>
-                <p class="card-desc" style="margin-top:10px;">${idea.description.substring(0, 100)}${idea.description.length > 100 ? '...' : ''}</p>
-                <div class="card-footer"><span><i class="fas fa-tools"></i> Needs: ${idea.need}</span><button class="btn-primary btn-sm view-idea" data-id="${idea.id}"><i class="fas fa-eye"></i> View & Review</button></div>
+                <div><small><i class="fas fa-user"></i> ${escapeHtml(idea.student_name)} | <i class="fas fa-tag"></i> ${escapeHtml(idea.category)}</small></div>
+                <p style="margin-top:10px;">${escapeHtml(idea.description.substring(0, 100))}...</p>
+                <button class="btn-primary btn-sm view-idea" data-id="${idea.id}"><i class="fas fa-eye"></i> View & Review</button>
             </div>
         `).join('');
         
@@ -214,94 +331,53 @@
     }
 
     function showIdeaModal(id) {
-        currentIdeaId = id;
-        const idea = ideas.find(i => i.id === id);
+        const idea = allIdeas.find(i => i.id === id);
         if (idea) {
+            currentIdeaId = id;
             document.getElementById('ideaDetails').innerHTML = `
-                <div class="form-group"><strong>Student:</strong> ${idea.studentName} (${idea.studentReg})</div>
-                <div class="form-group"><strong>Title:</strong> ${idea.title}</div>
-                <div class="form-group"><strong>Category:</strong> ${idea.category}</div>
-                <div class="form-group"><strong>Description:</strong> ${idea.description}</div>
-                <div class="form-group"><strong>What they need:</strong> ${idea.need}</div>
-                <div class="form-group"><strong>Submitted:</strong> ${idea.submittedDate}</div>
-                <div class="form-group"><strong>Current Status:</strong> <span class="${idea.status === 'Pending Review' ? 'status-badge-pending' : idea.status === 'Approved' ? 'status-badge-approved' : 'status-badge-rejected'}">${idea.status}</span></div>
-                ${idea.adminComment ? `<div class="form-group"><strong>Admin Feedback:</strong> ${idea.adminComment}</div>` : ''}
+                <div><strong>Student:</strong> ${escapeHtml(idea.student_name)}</div>
+                <div><strong>Title:</strong> ${escapeHtml(idea.title)}</div>
+                <div><strong>Category:</strong> ${escapeHtml(idea.category)}</div>
+                <div><strong>Description:</strong> ${escapeHtml(idea.description)}</div>
+                <div><strong>Resources Needed:</strong> ${escapeHtml(idea.resources_needed || 'Not specified')}</div>
+                <div><strong>Submitted:</strong> ${idea.created_at}</div>
+                <div><strong>Current Status:</strong> <span class="status-badge-${idea.status === 'pending' ? 'pending' : (idea.status === 'approved' ? 'approved' : 'rejected')}">${idea.status}</span></div>
+                ${idea.admin_comment ? `<div><strong>Previous Feedback:</strong> ${escapeHtml(idea.admin_comment)}</div>` : ''}
             `;
-            document.getElementById('adminComment').value = idea.adminComment || '';
+            document.getElementById('adminComment').value = idea.admin_comment || '';
             document.getElementById('ideaModal').style.display = 'flex';
         }
     }
 
-    function approveIdea() {
-        const idea = ideas.find(i => i.id === currentIdeaId);
-        if (idea) {
-            idea.status = 'Approved';
-            idea.adminComment = document.getElementById('adminComment').value;
-            saveIdeas();
-            renderIdeas();
-            updateStats();
-            renderCharts();
-            document.getElementById('ideaModal').style.display = 'none';
-            alert(`✅ Idea "${idea.title}" has been approved!`);
-        }
-    }
-
-    function rejectIdea() {
-        const idea = ideas.find(i => i.id === currentIdeaId);
-        if (idea) {
-            idea.status = 'Rejected';
-            idea.adminComment = document.getElementById('adminComment').value;
-            saveIdeas();
-            renderIdeas();
-            updateStats();
-            renderCharts();
-            document.getElementById('ideaModal').style.display = 'none';
-            alert(`❌ Idea "${idea.title}" has been rejected.`);
-        }
-    }
-
-    function renderOpportunities() {
-        const container = document.getElementById('opportunitiesListContainer');
-        if (opportunities.length === 0) { container.innerHTML = '<div class="widget-card" style="text-align:center;">No opportunities available</div>'; return; }
-        container.innerHTML = opportunities.map(opp => `
-            <div class="opportunity-card">
-                <div class="card-header">
-                    <strong>${opp.title}</strong>
-                    <span class="status-badge-approved">${opp.type === 'job' ? 'Job' : opp.type === 'training' ? 'Training' : 'Internship'}</span>
-                </div>
-                <div><small><i class="fas fa-calendar"></i> Deadline: ${opp.deadline} | <i class="fas fa-envelope"></i> ${opp.contact}</small></div>
-                <p class="card-desc" style="margin-top:10px;">${opp.description}</p>
-                <div class="card-footer"><button class="btn-danger btn-sm delete-opp" data-id="${opp.id}"><i class="fas fa-trash"></i> Delete</button></div>
-            </div>
-        `).join('');
-        document.querySelectorAll('.delete-opp').forEach(btn => btn.addEventListener('click', () => deleteOpportunity(parseInt(btn.dataset.id))));
-    }
-
-    function addOpportunity() {
-        const title = document.getElementById('oppTitle').value;
-        const type = document.getElementById('oppType').value;
-        const category = document.getElementById('oppCategory').value;
-        const description = document.getElementById('oppDesc').value;
-        const contact = document.getElementById('oppContact').value;
-        const deadline = document.getElementById('oppDeadline').value;
-        if (!title || !description) { alert('Please fill title and description'); return; }
-        const newOpp = { id: nextOppId++, title, type, category, description, contact, deadline, createdAt: new Date().toLocaleDateString('en-GB') };
-        opportunities.push(newOpp);
-        saveOpportunities();
-        renderOpportunities();
-        updateStats();
-        renderCharts();
-        document.getElementById('oppTitle').value = ''; document.getElementById('oppDesc').value = ''; document.getElementById('oppContact').value = ''; document.getElementById('oppDeadline').value = '';
-        alert('Opportunity added successfully!');
-    }
-
-    function deleteOpportunity(id) {
-        if (confirm('Delete this opportunity?')) { opportunities = opportunities.filter(o => o.id !== id); saveOpportunities(); renderOpportunities(); updateStats(); renderCharts(); }
+    function updateIdeaStatus(status) {
+        const comment = document.getElementById('adminComment').value;
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `action=update_idea_status&idea_id=${currentIdeaId}&status=${status}&admin_comment=${encodeURIComponent(comment)}`
+        })
+        .then(response => response.text())
+        .then(data => {
+            if (data.trim() === 'success') {
+                alert(`Idea ${status === 'approved' ? 'approved' : 'rejected'} successfully!`);
+                window.location.reload();
+            } else {
+                alert('Error updating status');
+            }
+        });
     }
 
     function renderCharts() {
-        const statusCounts = { 'Pending Review': ideas.filter(i => i.status === 'Pending Review').length, 'Approved': ideas.filter(i => i.status === 'Approved').length, 'Rejected': ideas.filter(i => i.status === 'Rejected').length };
-        const typeCounts = { 'Job': opportunities.filter(o => o.type === 'job').length, 'Training': opportunities.filter(o => o.type === 'training').length, 'Internship': opportunities.filter(o => o.type === 'internship').length };
+        const statusCounts = {
+            'Pending': allIdeas.filter(i => i.status === 'pending').length,
+            'Approved': allIdeas.filter(i => i.status === 'approved').length,
+            'Rejected': allIdeas.filter(i => i.status === 'rejected').length
+        };
+        const typeCounts = {
+            'Job': allOpportunities.filter(o => o.type === 'job').length,
+            'Training': allOpportunities.filter(o => o.type === 'training').length,
+            'Internship': allOpportunities.filter(o => o.type === 'internship').length
+        };
         
         const ctx1 = document.getElementById('ideasChart')?.getContext('2d');
         if (ctx1) { if (ideasChart) ideasChart.destroy(); ideasChart = new Chart(ctx1, { type: 'doughnut', data: { labels: Object.keys(statusCounts), datasets: [{ data: Object.values(statusCounts), backgroundColor: ['#f39c12', '#27ae60', '#e74c3c'] }] }, options: { responsive: true } }); }
@@ -309,6 +385,8 @@
         const ctx2 = document.getElementById('opportunitiesChart')?.getContext('2d');
         if (ctx2) { if (opportunitiesChart) opportunitiesChart.destroy(); opportunitiesChart = new Chart(ctx2, { type: 'bar', data: { labels: Object.keys(typeCounts), datasets: [{ label: 'Opportunities', data: Object.values(typeCounts), backgroundColor: '#3498db' }] }, options: { responsive: true } }); }
     }
+
+    function escapeHtml(str) { if (!str) return ''; return str.replace(/[&<>]/g, function(m) { if (m === '&') return '&amp;'; if (m === '<') return '&lt;'; if (m === '>') return '&gt;'; return m; }); }
 
     // Tab switching
     document.querySelectorAll('.tab-btn').forEach(btn => {
@@ -323,24 +401,64 @@
         });
     });
 
-    document.getElementById('refreshIdeasBtn')?.addEventListener('click', () => renderIdeas());
-    document.getElementById('refreshOppBtn')?.addEventListener('click', () => renderOpportunities());
-    document.getElementById('filterIdeaStatus')?.addEventListener('change', () => renderIdeas());
-    document.getElementById('filterIdeaCategory')?.addEventListener('change', () => renderIdeas());
-    document.getElementById('searchIdea')?.addEventListener('keyup', () => renderIdeas());
-    document.getElementById('addOpportunityBtn')?.addEventListener('click', addOpportunity);
-    document.getElementById('approveIdeaBtn')?.addEventListener('click', approveIdea);
-    document.getElementById('rejectIdeaBtn')?.addEventListener('click', rejectIdea);
+    document.getElementById('filterIdeaStatus')?.addEventListener('change', () => filterAndRenderIdeas());
+    document.getElementById('filterIdeaCategory')?.addEventListener('change', () => filterAndRenderIdeas());
+    document.getElementById('searchIdea')?.addEventListener('keyup', () => filterAndRenderIdeas());
+    document.getElementById('refreshIdeasBtn')?.addEventListener('click', () => window.location.reload());
+    document.getElementById('refreshOppBtn')?.addEventListener('click', () => window.location.reload());
+    document.getElementById('approveIdeaBtn')?.addEventListener('click', () => updateIdeaStatus('approved'));
+    document.getElementById('rejectIdeaBtn')?.addEventListener('click', () => updateIdeaStatus('rejected'));
     document.querySelectorAll('.close-modal').forEach(el => el.addEventListener('click', () => document.getElementById('ideaModal').style.display = 'none'));
 
-    setCurrentDate();
-    loadData();
+    // Add opportunity
+    document.getElementById('addOpportunityBtn')?.addEventListener('click', () => {
+        const title = document.getElementById('oppTitle').value;
+        const type = document.getElementById('oppType').value;
+        const category = document.getElementById('oppCategory').value;
+        const description = document.getElementById('oppDesc').value;
+        const contact = document.getElementById('oppContact').value;
+        const deadline = document.getElementById('oppDeadline').value;
+        if (!title || !description) { alert('Please fill title and description'); return; }
+        
+        fetch(window.location.href, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: `action=add_opportunity&title=${encodeURIComponent(title)}&type=${type}&category=${category}&description=${encodeURIComponent(description)}&contact=${encodeURIComponent(contact)}&deadline=${deadline}`
+        })
+        .then(response => response.text())
+        .then(data => {
+            if (data.trim() === 'success') {
+                alert('Opportunity added successfully!');
+                window.location.reload();
+            } else {
+                alert('Error adding opportunity');
+            }
+        });
+    });
 
-    function setCurrentDate() { const options = { weekday:'short', year:'numeric', month:'short', day:'numeric' }; const dateElement = document.getElementById('currentDate'); if(dateElement) dateElement.innerText = new Date().toLocaleDateString('en-US', options); }
-    
-    document.getElementById('adminName').innerText = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}').name || 'Administrator';
-    document.getElementById('adminId').innerText = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}').regNo || 'ADMIN/001';
-    document.getElementById('logoutBtn')?.addEventListener('click', (e) => { e.preventDefault(); sessionStorage.clear(); localStorage.clear(); window.location.href = '../login.html'; });
+    // Delete opportunity
+    document.querySelectorAll('.delete-opp').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (confirm('Delete this opportunity?')) {
+                const oppId = btn.dataset.id;
+                fetch(window.location.href, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                    body: `action=delete_opportunity&opp_id=${oppId}`
+                })
+                .then(response => response.text())
+                .then(data => {
+                    if (data.trim() === 'success') {
+                        window.location.reload();
+                    } else {
+                        alert('Error deleting opportunity');
+                    }
+                });
+            }
+        });
+    });
+
+    filterAndRenderIdeas();
 </script>
 </body>
 </html>
