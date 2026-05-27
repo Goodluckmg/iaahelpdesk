@@ -89,7 +89,8 @@ while ($row = mysqli_fetch_assoc($res2)) {
         .avatar i { font-size: 35px; color: white; }
         .nav-menu { flex: 1; padding: 15px; }
         .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 15px; border-radius: 10px; color: #cbdbe6; text-decoration: none; }
-        .nav-item.active { background: #e74c3c; color: white; }
+        .role-admin { background: #2c7da0; color: #fff; }
+        .nav-item.active { background: ; color: white; }
         .logout-item { margin-top: auto; border-top: 1px solid #2c3e50; padding-top: 15px; }
         .main-content { flex: 1; padding: 20px 25px; background: #f8fafc; overflow-y: auto; }
         .top-bar { display: flex; justify-content: space-between; margin-bottom: 25px; }
