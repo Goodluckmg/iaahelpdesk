@@ -36,21 +36,27 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             $_SESSION['role'] = $student['role'];
             $_SESSION['logged_in'] = true;
             
-            // Jaribu redirect kwa kurasa rahisi kwanza
-            // Badilisha kulingana na muundo wako
-            if ($student['role'] == 'student') {
-                // Jaribu kuelekeza kwenye faili halisi – hakikisha ipo
-                header("Location: student_index.php");
-                exit();
-            } elseif ($student['role'] == 'super_admin' || $student['role'] == 'admin') {
-                header("Location: admin_dashboard.php");
-                exit();
-            } else {
-                // Kwa role nyingine, rudisha login kwa sasa
-                $_SESSION['error'] = "Role not supported yet";
-                header("Location: login.php");
-                exit();
-            }
+// Badilisha kulingana na muundo wako
+if ($student['role'] == 'student') {
+    header("Location: student_index.php");
+    exit();
+} elseif ($student['role'] == 'super_admin' || $student['role'] == 'admin') {
+    header("Location: admin_dashboard.php");
+    exit();
+} elseif ($student['role'] == 'finance') {
+    header("Location: finance.php");  // Au finance.php ikiwa iko kwenye root
+    exit();
+} elseif ($student['role'] == 'ict') {
+    header("Location: ict_dashboard.php");
+    exit();
+} elseif ($student['role'] == 'lecturer') {
+    header("Location: lecturer_dashboard.php");
+    exit();
+} else {
+    $_SESSION['error'] = "Role not supported yet";
+    header("Location: login.php");
+    exit();
+}
         } else {
             $_SESSION['error'] = "Invalid password";
             header("Location: login.php");

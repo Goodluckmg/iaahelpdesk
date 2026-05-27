@@ -182,22 +182,22 @@ while ($row = mysqli_fetch_assoc($result)) {
                         <tbody>
                             <?php foreach ($tickets as $t): ?>
                             <tr>
-                                <td><strong><?php echo htmlspecialchars($t['ticket_no']); ?></strong>侧
-                                <td><?php echo htmlspecialchars($t['student_name'] ?? 'Unknown'); ?>侧
-                                <td><?php echo htmlspecialchars(substr($t['title'], 0, 50)); ?>侧
-                                <td><?php echo htmlspecialchars($t['department_name'] ?? 'Unassigned'); ?>侧
+                                <td><strong><?php echo htmlspecialchars($t['ticket_no']); ?></strong>
+                                <td><?php echo htmlspecialchars($t['student_name'] ?? 'Unknown'); ?>
+                                <td><?php echo htmlspecialchars(substr($t['title'], 0, 50)); ?>
+                                <td><?php echo htmlspecialchars($t['department_name'] ?? 'Unassigned'); ?>
                                 <td>
                                     <span class="status-badge <?php echo ($t['priority'] == 'urgent') ? 'status-urgent' : ''; ?>">
                                         <?php echo ucfirst($t['priority']); ?>
                                     </span>
-                                侧
+                                
                                 <td>
                                     <select class="status-select" data-id="<?php echo $t['id']; ?>" style="padding:4px 8px; border-radius:12px; border:1px solid #cbdbe6;">
                                         <option value="Open" <?php echo ($t['display_status'] == 'Open') ? 'selected' : ''; ?>>Open</option>
                                         <option value="In Progress" <?php echo ($t['display_status'] == 'In Progress') ? 'selected' : ''; ?>>In Progress</option>
                                         <option value="Resolved" <?php echo ($t['display_status'] == 'Resolved') ? 'selected' : ''; ?>>Resolved</option>
                                     </select>
-                                侧
+                                
                                 <td>
                                     <?php if($t['has_document'] && $t['document_path']): ?>
                                         <button class="btn-primary btn-sm view-doc-btn" 
@@ -209,13 +209,13 @@ while ($row = mysqli_fetch_assoc($result)) {
                                     <?php else: ?>
                                         <span style="color:#94a3b8; font-size:0.7rem;">No document</span>
                                     <?php endif; ?>
-                                侧
+                                
                                 <td><?php echo date('d/m/Y', strtotime($t['created_at'])); ?>侧
                                 <td>
                                     <button class="btn-primary btn-sm view-ticket" data-id="<?php echo $t['id']; ?>" data-title="<?php echo htmlspecialchars($t['title']); ?>">
                                         <i class="fas fa-info-circle"></i> Details
                                     </button>
-                                侧
+                                
                             </tr>
                             <?php endforeach; ?>
                         </tbody>

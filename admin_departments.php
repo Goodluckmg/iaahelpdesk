@@ -222,17 +222,17 @@ if (isset($_GET['edit'])) {
                         <tbody>
                             <?php foreach ($departments as $dept): ?>
                             <tr>
-                                <td><?php echo $dept['id']; ?>侧
-                                <td><strong><?php echo htmlspecialchars($dept['name']); ?></strong>侧
-                                <td><?php echo htmlspecialchars($dept['head_of_department']); ?>侧
-                                <td><a href="mailto:<?php echo htmlspecialchars($dept['email']); ?>"><?php echo htmlspecialchars($dept['email']); ?></a>侧
+                                <td><?php echo $dept['id']; ?>
+                                <td><strong><?php echo htmlspecialchars($dept['name']); ?></strong>
+                                <td><?php echo htmlspecialchars($dept['head_of_department']); ?>
+                                <td><a href="mailto:<?php echo htmlspecialchars($dept['email']); ?>"><?php echo htmlspecialchars($dept['email']); ?></a>
                                 <td>
                                     <?php if($dept['ticket_count'] > 0): ?>
                                         <span class="status-badge" style="background:#e3f2fd; color:#1565c0;"><?php echo $dept['ticket_count']; ?> tickets</span>
                                     <?php else: ?>
                                         <span style="color:#94a3b8;">0 tickets</span>
                                     <?php endif; ?>
-                                侧
+                                
                                 <td class="action-buttons">
                                     <a href="?edit=<?php echo $dept['id']; ?>" class="btn-primary btn-sm" style="text-decoration:none; display:inline-block;">
                                         <i class="fas fa-edit"></i> Edit
@@ -269,7 +269,7 @@ if (isset($_GET['edit'])) {
                 <input type="text" name="head" id="deptHead" placeholder="e.g., Dr. John Mkono" required>
             </div>
             <div class="form-group">
-                <label>Department Email *</label>
+                <label>Department Email </label>
                 <input type="email" name="email" id="deptEmail" placeholder="e.g., dept@iaa.ac.tz" required>
             </div>
             <div style="display:flex; gap:10px; justify-content:flex-end;">

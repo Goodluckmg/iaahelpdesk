@@ -186,7 +186,7 @@ while ($row = mysqli_fetch_assoc($users_result)) {
 </div>
             <div class="welcome-text">Welcome,</div>
             <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
-            <div class="user-role"><?php echo $is_super_admin ? '👑 Super Admin' : '⚙️ Regular Admin'; ?></div>
+            <div class="user-role"><?php echo $is_super_admin ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
             <div class="user-id"><?php echo htmlspecialchars($_SESSION['reg_no']); ?></div>
         </div>
         <div class="nav-menu">
@@ -237,9 +237,9 @@ while ($row = mysqli_fetch_assoc($users_result)) {
                             $can_delete = ($is_super_admin && !$is_super_admin_user && !$is_self);
                         ?>
                         <tr>
-                            <td><?php echo $user['id']; ?>侧
-                            <td><?php echo htmlspecialchars($user['fullname']); ?><?php echo $is_super_admin_user ? ' 👑' : ''; ?>侧
-                            <td><?php echo htmlspecialchars($user['reg_no']); ?>侧
+                            <td><?php echo $user['id']; ?>
+                            <td><?php echo htmlspecialchars($user['fullname']); ?><?php echo $is_super_admin_user ? ' 👑' : ''; ?>
+                            <td><?php echo htmlspecialchars($user['reg_no']); ?>
                             <td>
                                 <?php
                                 if ($user['role'] === 'super_admin') echo '<span class="role-badge role-super-admin">Super Admin</span>';
@@ -250,7 +250,7 @@ while ($row = mysqli_fetch_assoc($users_result)) {
                                 elseif ($user['role'] === 'ict') echo '<span class="role-badge role-ict">ICT</span>';
                                 else echo ucfirst($user['role']);
                                 ?>
-                            侧
+                            
                             <td>
                                 <?php 
                                 if ($user['role'] === 'admin') {
@@ -261,9 +261,9 @@ while ($row = mysqli_fetch_assoc($users_result)) {
                                     echo '-';
                                 }
                                 ?>
-                            侧
-                            <td><?php echo htmlspecialchars($user['email']); ?>侧
-                            <td><span class="status-badge status-resolved">Active</span>侧
+                            
+                            <td><?php echo htmlspecialchars($user['email']); ?>
+                            <td><span class="status-badge status-resolved">Active</span>
                             <td class="action-buttons">
                                 <?php if ($can_edit): ?>
                                     <button class="btn-primary btn-icon edit-user" data-id="<?php echo $user['id']; ?>" data-name="<?php echo htmlspecialchars($user['fullname']); ?>" data-reg="<?php echo htmlspecialchars($user['reg_no']); ?>" data-email="<?php echo htmlspecialchars($user['email']); ?>" data-role="<?php echo $user['role']; ?>"><i class="fas fa-edit"></i> Edit</button>
@@ -275,7 +275,7 @@ while ($row = mysqli_fetch_assoc($users_result)) {
                                 <?php else: ?>
                                     <button class="btn-danger btn-icon disabled-btn" disabled><i class="fas fa-trash"></i> Delete</button>
                                 <?php endif; ?>
-                            侧
+                            
                         </tr>
                         <?php endforeach; ?>
                     </tbody>

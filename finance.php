@@ -1,3 +1,64 @@
+<?php
+session_start();
+
+// Check if user is logged in
+if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
+    header("Location: login.php");
+    exit();
+}
+
+// Check if user has finance role
+if ($_SESSION['role'] !== 'finance' && $_SESSION['role'] !== 'super_admin') {
+    header("Location: ../" . $_SESSION['role'] . "finance.php");
+    exit();
+}
+
+// Include database connection
+require_once 'config/database.php';
+
+// Get finance officer info from session
+$officer_id = $_SESSION['user_id'] ?? $_SESSION['student_id'] ?? 0;
+$fullname = $_SESSION['fullname'] ?? 'Finance Officer';
+$reg_no = $_SESSION['reg_no'] ?? 'FIN/2024/001';
+
+// Get profile photo
+$photo_query = "SELECT profile_photo FROM students WHERE id = $officer_id";
+$photo_result = mysqli_query($conn, $photo_query);
+$student_data = mysqli_fetch_assoc($photo_result);
+$current_photo = $student_data['profile_photo'] ?? null;
+
+// Get statistics for finance queries
+$stats_query = "SELECT 
+    COUNT(CASE WHEN status IN ('open', 'pending') THEN 1 END) as pending_count,
+    COUNT(CASE WHEN status = 'in_progress' THEN 1 END) as progress_count,
+    COUNT(CASE WHEN status = 'resolved' THEN 1 END) as resolved_count,
+    COUNT(*) as total_count
+FROM tickets WHERE department_id = 2";
+$stats_result = mysqli_query($conn, $stats_query);
+$stats = mysqli_fetch_assoc($stats_result);
+
+// Calculate response rate
+$response_rate = $stats['total_count'] > 0 ? round(($stats['resolved_count'] / $stats['total_count']) * 100) : 0;
+
+// Get recent finance queries (last 5)
+$recent_query = "SELECT t.*, s.fullname as student_name, s.reg_no as student_reg 
+                 FROM tickets t
+                 JOIN students s ON t.user_id = s.id
+                 WHERE t.department_id = 2 
+                 ORDER BY t.created_at DESC LIMIT 5";
+$recent_result = mysqli_query($conn, $recent_query);
+
+// Get common issues statistics
+$issues_query = "SELECT 
+    COUNT(CASE WHEN title LIKE '%payment%' OR title LIKE '%fee%' OR category = 'Fee-related query' THEN 1 END) as payment_issues,
+    COUNT(CASE WHEN title LIKE '%library%' OR category = 'Library Fee' THEN 1 END) as library_issues,
+    COUNT(CASE WHEN title LIKE '%scholarship%' OR category = 'Scholarship' THEN 1 END) as scholarship_issues,
+    COUNT(CASE WHEN title LIKE '%balance%' OR title LIKE '%statement%' THEN 1 END) as balance_issues
+FROM tickets WHERE department_id = 2";
+$issues_result = mysqli_query($conn, $issues_query);
+$issues = mysqli_fetch_assoc($issues_result);
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,12 +67,88 @@
     <title>IAA Helpdesk | Finance Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="css/finance.css">
+    <link rel="stylesheet" href="css/style.css">
     <style>
+        .dashboard-container {
+            display: flex;
+            min-height: 100vh;
+        }
+        .main-content {
+            flex: 1;
+            padding: 20px;
+            background: #f5f7fa;
+        }
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .page-title {
+            font-size: 1.5rem;
+            color: #2c3e50;
+            margin: 0;
+        }
+        .date-badge {
+            background: white;
+            padding: 8px 16px;
+            border-radius: 20px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            font-size: 0.85rem;
+        }
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 25px;
+        }
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            text-align: center;
+            transition: transform 0.2s;
+        }
+        .stat-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+        }
+        .stat-card i {
+            font-size: 2rem;
+            color: #f39c12;
+            margin-bottom: 10px;
+        }
+        .stat-number {
+            font-size: 1.8rem;
+            font-weight: bold;
+            color: #2c3e50;
+        }
+        .stat-card div:last-child {
+            color: #7f8c8d;
+            font-size: 0.85rem;
+        }
+        .widget-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
         .query-item {
             background: #f9fdfe;
             border-left: 3px solid #f39c12;
-            border-radius: 14px;
+            border-radius: 10px;
             padding: 15px;
             margin-bottom: 12px;
         }
@@ -30,347 +167,424 @@
             color: #2c3e50;
             margin-bottom: 10px;
         }
-        .respond-btn {
-            background: #f39c12;
-            border: none;
-            padding: 5px 14px;
+        .status-badge {
+            padding: 3px 10px;
             border-radius: 20px;
-            color: white;
-            cursor: pointer;
             font-size: 0.7rem;
-            transition: 0.2s;
+            font-weight: bold;
         }
-        .respond-btn:hover {
+        .status-pending {
+            background: #fff3e0;
+            color: #e67e22;
+        }
+        .status-progress {
+            background: #e3f2fd;
+            color: #2196f3;
+        }
+        .status-resolved {
+            background: #d9f0e5;
+            color: #1d6f42;
+        }
+        .btn-primary {
+            background: #f39c12;
+            color: white;
+            border: none;
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+        .btn-primary:hover {
             background: #e67e22;
         }
-        .ticket-tabs {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            padding: 12px;
+            text-align: left;
             border-bottom: 1px solid #e2edf2;
-            padding-bottom: 10px;
         }
-        .ticket-tab {
-            background: none;
-            border: none;
-            padding: 8px 20px;
-            cursor: pointer;
-            font-weight: 500;
-            color: #7f8c8d;
-            transition: 0.2s;
-            border-radius: 20px;
+        th {
+            background: #f8f9fa;
+            font-weight: 600;
         }
-        .ticket-tab.active {
-            background: #f39c12;
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: linear-gradient(135deg, #2c7da0, #1f5068);
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar i {
+            font-size: 35px;
             color: white;
         }
-        .document-attachment {
-            margin-top: 10px;
-            padding: 8px;
-            background: #e8f0f5;
-            border-radius: 10px;
+        .sidebar {
+            width: 260px;
+            background: linear-gradient(180deg, #0a2b38, #0d3b4c);
+            color: white;
+            padding: 20px;
+            min-height: 100vh;
+        }
+        .profile-area {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .welcome-text {
             font-size: 0.75rem;
+            opacity: 0.8;
         }
-        .view-doc-btn {
-            background: #2c7da0;
-            color: white;
-            border: none;
-            padding: 3px 10px;
-            border-radius: 15px;
-            cursor: pointer;
-            margin-left: 10px;
+        .user-name {
+            font-weight: bold;
+            margin: 5px 0;
+        }
+        .user-role {
             font-size: 0.7rem;
+            opacity: 0.7;
+        }
+        .user-id {
+            font-size: 0.65rem;
+            opacity: 0.6;
+        }
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+        .nav-item {
+            color: white;
+            text-decoration: none;
+            padding: 12px 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            transition: background 0.2s;
+        }
+        .nav-item:hover, .nav-item.active {
+            background: rgba(255,255,255,0.1);
+        }
+        .logout-item {
+            margin-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 15px;
+        }
+        .nav-label {
+            font-size: 0.9rem;
+        }
+        @media (max-width: 768px) {
+            .stats-row {
+                grid-template-columns: repeat(2, 1fr);
+            }
+            .sidebar {
+                width: 80px;
+            }
+            .nav-label, .welcome-text, .user-name, .user-role, .user-id {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
-<div class="app-container">
+<div class="dashboard-container">
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-coins"></i></div>
+            <div class="avatar">
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($current_photo); ?>" alt="Profile Photo">
+                <?php else: ?>
+                    <i class="fas fa-coins"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
-            <div class="user-name" id="financeName">Mr. James Peter</div>
-            <div class="user-role">💰 Finance Office</div>
-            <div class="user-id" id="financeId">FIN/2024/001</div>
+            <div class="user-name"><?php echo htmlspecialchars($fullname); ?></div>
+            <div class="user-role">💰 Finance Officer</div>
+            <div class="user-id"><?php echo htmlspecialchars($reg_no); ?></div>
         </div>
         <div class="nav-menu">
-            <a href="finance.php" class="nav-item active"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
-            <a href="fin_queries.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">Student Queries</span></a>
-             <a href="fin_students.php" class="nav-item"><i class="fas fa-user-check"></i><span class="nav-label">Verification</span></a>
-            <a href="fin_edit.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
-            <a href="fin_reports.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Reports</span></a>
-            <div class="logout-item"><a href="login.html" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <a href="finance.php" class="nav-item active">
+                <i class="fas fa-chart-pie"></i>
+                <span class="nav-label">Dashboard</span>
+            </a>
+            <a href="fin_queries.php" class="nav-item">
+                <i class="fas fa-ticket-alt"></i>
+                <span class="nav-label">Student Queries</span>
+            </a>
+            <a href="fin_students.php" class="nav-item">
+                <i class="fas fa-user-check"></i>
+                <span class="nav-label">Verification</span>
+            </a>
+            <a href="fin_reports.php" class="nav-item">
+                <i class="fas fa-chart-line"></i>
+                <span class="nav-label">Reports</span>
+            </a>
+            <a href="fin_edit.php" class="nav-item">
+                <i class="fas fa-camera"></i>
+                <span class="nav-label">Edit Photo</span>
+            </a>
+            <div class="logout-item">
+                <a href="logout.php" class="nav-item">
+                    <i class="fas fa-sign-out-alt"></i>
+                    <span class="nav-label">Logout</span>
+                </a>
+            </div>
         </div>
     </aside>
 
     <main class="main-content">
         <div class="top-bar">
             <h1 class="page-title">Finance Dashboard</h1>
-            <div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
+            <div class="date-badge">
+                <i class="far fa-calendar-alt"></i> 
+                <span id="currentDate"></span>
+            </div>
         </div>
 
-        <!-- STATS CARDS (Payment-related removed) -->
+        <!-- STATS CARDS -->
         <div class="stats-row">
             <div class="stat-card">
                 <i class="fas fa-clock"></i>
-                <div class="stat-number" id="pendingQueries">0</div>
+                <div class="stat-number"><?php echo $stats['pending_count'] ?? 0; ?></div>
                 <div>Pending Queries</div>
             </div>
             <div class="stat-card">
                 <i class="fas fa-spinner"></i>
-                <div class="stat-number" id="progressQueries">0</div>
+                <div class="stat-number"><?php echo $stats['progress_count'] ?? 0; ?></div>
                 <div>In Progress</div>
             </div>
             <div class="stat-card">
                 <i class="fas fa-check-circle"></i>
-                <div class="stat-number" id="resolvedQueries">0</div>
+                <div class="stat-number"><?php echo $stats['resolved_count'] ?? 0; ?></div>
                 <div>Resolved</div>
             </div>
             <div class="stat-card">
                 <i class="fas fa-chart-line"></i>
-                <div class="stat-number" id="responseRate">0%</div>
+                <div class="stat-number"><?php echo $response_rate; ?>%</div>
                 <div>Response Rate</div>
             </div>
         </div>
 
-        <!-- Student Queries Section (Main focus) -->
+        <!-- QUERY TRENDS CHART -->
         <div class="widget-card">
             <div class="flex-between">
-                <strong>📋 Student Finance Queries</strong>
-                <button class="btn-primary" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <strong><i class="fas fa-chart-line"></i> Query Trends (Last 7 Days)</strong>
+                <button class="btn-primary" onclick="refreshChart()">
+                    <i class="fas fa-sync-alt"></i> Refresh
+                </button>
             </div>
-            <div class="ticket-tabs">
-                <button class="ticket-tab active" data-filter="all">All Queries</button>
-                <button class="ticket-tab" data-filter="Pending">Pending</button>
-                <button class="ticket-tab" data-filter="In Progress">In Progress</button>
-                <button class="ticket-tab" data-filter="Resolved">Resolved</button>
-            </div>
-            <div id="studentQueriesList"></div>
+            <canvas id="trendChart" height="100"></canvas>
         </div>
 
-        <!-- Quick Stats - Most Common Issues -->
+        <!-- RECENT QUERIES -->
         <div class="widget-card">
-            <div class="flex-between"><strong>📊 Common Student Issues</strong></div>
-            <div id="commonIssues"></div>
+            <div class="flex-between">
+                <strong><i class="fas fa-list"></i> Recent Student Queries</strong>
+                <a href="fin_queries.php" class="btn-primary">
+                    <i class="fas fa-eye"></i> View All
+                </a>
+            </div>
+            
+            <?php if(mysqli_num_rows($recent_result) == 0): ?>
+                <div style="text-align:center; padding:40px; color:#7f8c8d;">
+                    <i class="fas fa-inbox" style="font-size:2rem;"></i>
+                    <p>No finance queries yet</p>
+                </div>
+            <?php else: ?>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ticket No</th>
+                            <th>Student</th>
+                            <th>Title</th>
+                            <th>Status</th>
+                            <th>Date</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php while($ticket = mysqli_fetch_assoc($recent_result)): ?>
+                        <tr>
+                            <td><?php echo htmlspecialchars($ticket['ticket_no']); ?></td>
+                            <td><?php echo htmlspecialchars($ticket['student_name']); ?><br>
+                                <small><?php echo htmlspecialchars($ticket['student_reg']); ?></small>
+                            </td>
+                            <td><?php echo htmlspecialchars(substr($ticket['title'], 0, 40)); ?></td>
+                            <td>
+                                <span class="status-badge status-<?php echo $ticket['status']; ?>">
+                                    <?php echo ucfirst(str_replace('_', ' ', $ticket['status'])); ?>
+                                </span>
+                            </td>
+                            <td><?php echo date('d/m/Y', strtotime($ticket['created_at'])); ?></td>
+                            <td>
+                                <a href="fin_queries.php?ticket=<?php echo $ticket['id']; ?>" class="btn-primary" style="padding:4px 12px; font-size:0.7rem;">
+                                    View
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endwhile; ?>
+                    </tbody>
+                </table>
+            <?php endif; ?>
+        </div>
+
+        <!-- COMMON ISSUES & QUICK ACTIONS -->
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 25px;">
+            <div class="widget-card">
+                <strong><i class="fas fa-chart-pie"></i> Common Student Issues</strong>
+                <div style="margin-top: 15px;">
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>💰 Payment Issues</span>
+                        <strong><?php echo $issues['payment_issues'] ?? 0; ?></strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>📚 Library Fee</span>
+                        <strong><?php echo $issues['library_issues'] ?? 0; ?></strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between; margin-bottom: 10px;">
+                        <span>🎓 Scholarship</span>
+                        <strong><?php echo $issues['scholarship_issues'] ?? 0; ?></strong>
+                    </div>
+                    <div style="display: flex; justify-content: space-between;">
+                        <span>💳 Balance Inquiry</span>
+                        <strong><?php echo $issues['balance_issues'] ?? 0; ?></strong>
+                    </div>
+                </div>
+            </div>
+
+            <div class="widget-card">
+                <strong><i class="fas fa-bolt"></i> Quick Actions</strong>
+                <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
+                    <a href="fin_queries.php?filter=pending" class="btn-primary" style="background:#e67e22; justify-content:center;">
+                        <i class="fas fa-clock"></i> View Pending Queries
+                    </a>
+                    <a href="fin_students.php" class="btn-primary" style="background:#27ae60; justify-content:center;">
+                        <i class="fas fa-check-circle"></i> Verify Payments
+                    </a>
+                    <a href="fin_reports.php" class="btn-primary" style="background:#3498db; justify-content:center;">
+                        <i class="fas fa-download"></i> Generate Report
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- SUPPORT CONTACT -->
+        <div class="widget-card">
+            <div class="flex-between">
+                <strong><i class="fas fa-headset"></i> Need Help?</strong>
+            </div>
+            <div style="background: #e8f0f5; padding: 15px; border-radius: 12px; margin-top: 10px;">
+                <i class="fas fa-phone-alt"></i> <strong>ICT Support:</strong> +255 712 345 678<br>
+                <i class="fas fa-envelope"></i> <strong>Email:</strong> helpdesk@iaa.ac.tz
+            </div>
         </div>
     </main>
 </div>
 
-<!-- MODAL FOR RESPONDING TO STUDENT QUERY -->
-<div id="respondModal" class="modal">
-    <div class="modal-content">
-        <div class="modal-header"><h3>Respond to Student Query</h3><span class="close-modal">&times;</span></div>
-        <form id="respondForm">
-            <div class="form-group"><label>Query ID: <span id="queryIdDisplay"></span></label></div>
-            <div class="form-group"><label>Student: <span id="studentNameDisplay"></span></label></div>
-            <div class="form-group"><label>Registration: <span id="studentRegDisplay"></span></label></div>
-            <div class="form-group"><label>Original Query:</label><div id="originalQueryDisplay" style="background:#f8fafc; padding:10px; border-radius:12px; font-size:0.85rem; max-height:150px; overflow-y:auto;"></div></div>
-            <div class="form-group" id="documentDisplay" style="display:none;"></div>
-            <div class="form-group"><label>Response Message</label><textarea id="responseMsg" rows="4" placeholder="Write your response..."></textarea></div>
-            <div class="form-group"><label>Update Status</label>
-                <select id="responseStatus">
-                    <option value="In Progress">In Progress (Being reviewed)</option>
-                    <option value="Resolved">Resolved (Payment confirmed / Issue fixed)</option>
-                </select>
-            </div>
-            <div style="display:flex; gap:10px;">
-                <button type="button" class="btn-primary" id="cancelModalBtn" style="background:#7f8c8d;">Cancel</button>
-                <button type="submit" class="btn-primary">Send Response</button>
-            </div>
-        </form>
-    </div>
-</div>
-
 <script>
     // Set current date
-    const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
-    document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', options);
-    
-    // Load logged in user
-    let loggedUser = JSON.parse(sessionStorage.getItem('loggedInUser') || '{}');
-    document.getElementById('financeName').innerText = loggedUser.name || 'Mr. James Peter';
-    document.getElementById('financeId').innerText = loggedUser.regNo || 'FIN/2024/001';
-    
-    // Student queries (finance-related only)
-    let studentQueries = JSON.parse(localStorage.getItem('student_finance_queries') || '[]');
-    let currentFilter = 'all';
-    let currentQueryId = null;
-    
-    // Demo data if empty
-    if (studentQueries.length === 0) {
-        studentQueries = [
-            { id: 2001, studentName: 'John Student', studentReg: 'IAA/2024/0789', title: 'Fee payment not reflected - Need access to exams', category: 'Fee-related query', department: 'Finance Office', priority: 'High', description: 'I paid my tuition fee of TSh 850,000 on May 28th but the system still shows pending balance. Attached payment receipt. I need access to my upcoming exams.', status: 'Pending', date: '2024-06-03', hasDocument: true, documentName: 'payment_receipt.jpg' },
-            { id: 2002, studentName: 'Mary Student', studentReg: 'IAA/2024/0456', title: 'Library fee payment verification', category: 'Fee-related query', department: 'Finance Office', priority: 'Medium', description: 'I paid library fee of TSh 350,000 but library system says I haven\'t paid. Attached receipt.', status: 'In Progress', date: '2024-06-02', hasDocument: true, documentName: 'library_receipt.png' },
-            { id: 2003, studentName: 'Peter Student', studentReg: 'IAA/2024/0890', title: 'Scholarship balance inquiry', category: 'Fee-related query', department: 'Finance Office', priority: 'Low', description: 'I have a scholarship that covers 50% of tuition. Please confirm my remaining balance.', status: 'Resolved', date: '2024-05-30', hasDocument: false }
-        ];
-        localStorage.setItem('student_finance_queries', JSON.stringify(studentQueries));
-    }
-    
-    function saveStudentQueries() { localStorage.setItem('student_finance_queries', JSON.stringify(studentQueries)); }
-    
-    function updateStats() {
-        const pending = studentQueries.filter(q => q.status === 'Pending').length;
-        const inProgress = studentQueries.filter(q => q.status === 'In Progress').length;
-        const resolved = studentQueries.filter(q => q.status === 'Resolved').length;
-        const total = studentQueries.length;
-        const responseRate = total === 0 ? 0 : Math.round((resolved / total) * 100);
-        
-        document.getElementById('pendingQueries').innerText = pending;
-        document.getElementById('progressQueries').innerText = inProgress;
-        document.getElementById('resolvedQueries').innerText = resolved;
-        document.getElementById('responseRate').innerText = responseRate + '%';
-    }
-    
-    function viewDocument(documentData, documentName) {
-        const modal = document.createElement('div');
-        modal.style.cssText = 'position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.85); z-index:10000; display:flex; align-items:center; justify-content:center;';
-        const content = document.createElement('div');
-        content.style.cssText = 'max-width:90%; max-height:90%; background:white; border-radius:16px; padding:20px; position:relative;';
-        const closeBtn = document.createElement('button');
-        closeBtn.innerHTML = '✕ Close';
-        closeBtn.style.cssText = 'position:absolute; top:10px; right:20px; background:#c0392b; color:white; border:none; padding:8px 16px; border-radius:30px; cursor:pointer;';
-        closeBtn.onclick = () => document.body.removeChild(modal);
-        
-        if (documentData && documentData.startsWith('data:image')) {
-            const img = document.createElement('img');
-            img.src = documentData;
-            img.style.maxWidth = '100%';
-            img.style.maxHeight = '80vh';
-            content.appendChild(img);
-        } else {
-            const msg = document.createElement('p');
-            msg.innerHTML = `<i class="fas fa-file"></i> Document: ${documentName}`;
-            content.appendChild(msg);
+    function setCurrentDate() {
+        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+        const dateElement = document.getElementById('currentDate');
+        if (dateElement) {
+            dateElement.innerText = new Date().toLocaleDateString('en-US', options);
         }
-        
-        content.appendChild(closeBtn);
-        modal.appendChild(content);
-        document.body.appendChild(modal);
     }
-    
-    function renderStudentQueries() {
-        let filtered = studentQueries;
-        if (currentFilter !== 'all') {
-            filtered = studentQueries.filter(q => q.status === currentFilter);
+    setCurrentDate();
+
+    // Chart data from PHP
+    const trendData = <?php
+        // Get last 7 days data
+        $trend_query = "SELECT 
+            DATE(created_at) as date,
+            COUNT(*) as total,
+            SUM(CASE WHEN status = 'resolved' THEN 1 ELSE 0 END) as resolved
+        FROM tickets 
+        WHERE department_id = 2 AND created_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+        GROUP BY DATE(created_at)
+        ORDER BY date ASC";
+        $trend_result = mysqli_query($conn, $trend_query);
+        $dates = [];
+        $totals = [];
+        $resolved = [];
+        while($row = mysqli_fetch_assoc($trend_result)) {
+            $dates[] = date('d/m', strtotime($row['date']));
+            $totals[] = $row['total'];
+            $resolved[] = $row['resolved'];
         }
-        
-        const container = document.getElementById('studentQueriesList');
-        if (filtered.length === 0) {
-            container.innerHTML = '<div style="text-align:center; padding:40px;">No student queries found</div>';
-            return;
-        }
-        
-        container.innerHTML = filtered.map(q => `
-            <div class="query-item">
-                <div class="flex-between" style="margin-bottom:5px;">
-                    <div class="query-title">#${q.id} - ${escapeHtml(q.title)}</div>
-                    <span class="status-badge ${q.status === 'Resolved' ? 'status-resolved' : q.status === 'In Progress' ? 'status-progress' : 'status-pending'}">${q.status}</span>
-                </div>
-                <div class="query-meta">
-                    <i class="fas fa-user"></i> ${q.studentName} (${q.studentReg}) | 
-                    <i class="fas fa-calendar"></i> ${q.date} | 
-                    🔥 ${q.priority}
-                </div>
-                <div class="query-description">${escapeHtml(q.description.substring(0, 120))}${q.description.length > 120 ? '...' : ''}</div>
-                ${q.hasDocument ? `<div class="document-attachment"><i class="fas fa-paperclip"></i> Receipt attached: ${q.documentName} <button class="view-doc-btn" data-doc="${q.documentData || ''}" data-name="${q.documentName}">View Receipt</button></div>` : ''}
-                ${q.status !== 'Resolved' ? `<button class="respond-btn" data-id="${q.id}" data-name="${q.studentName}" data-reg="${q.studentReg}" data-desc="${escapeHtml(q.description)}" data-doc="${q.documentData || ''}" data-docname="${q.documentName || ''}">📝 Respond to Query</button>` : ''}
-            </div>
-        `).join('');
-        
-        // View document buttons
-        document.querySelectorAll('.view-doc-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const docData = btn.getAttribute('data-doc');
-                const docName = btn.getAttribute('data-name');
-                viewDocument(docData, docName);
-            });
-        });
-        
-        // Respond buttons
-        document.querySelectorAll('.respond-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                currentQueryId = parseInt(btn.dataset.id);
-                document.getElementById('queryIdDisplay').innerText = currentQueryId;
-                document.getElementById('studentNameDisplay').innerText = btn.dataset.name;
-                document.getElementById('studentRegDisplay').innerText = btn.dataset.reg;
-                document.getElementById('originalQueryDisplay').innerHTML = btn.dataset.desc;
-                
-                const hasDoc = btn.getAttribute('data-doc') && btn.getAttribute('data-doc') !== '';
-                const docDisplay = document.getElementById('documentDisplay');
-                if (hasDoc) {
-                    docDisplay.style.display = 'block';
-                    docDisplay.innerHTML = `<label>Attached Receipt:</label><div><a href="#" onclick="viewDocument('${btn.dataset.doc}', '${btn.dataset.docname}'); return false;"><i class="fas fa-receipt"></i> View Receipt</a></div>`;
-                } else {
-                    docDisplay.style.display = 'none';
+        echo json_encode(['dates' => $dates, 'totals' => $totals, 'resolved' => $resolved]);
+    ?>;
+
+    // Initialize chart
+    let trendChart;
+    function initChart() {
+        const ctx = document.getElementById('trendChart').getContext('2d');
+        trendChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: trendData.dates,
+                datasets: [
+                    {
+                        label: 'Queries Received',
+                        data: trendData.totals,
+                        borderColor: '#f39c12',
+                        backgroundColor: 'rgba(243, 156, 18, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    },
+                    {
+                        label: 'Queries Resolved',
+                        data: trendData.resolved,
+                        borderColor: '#27ae60',
+                        backgroundColor: 'rgba(39, 174, 96, 0.05)',
+                        fill: true,
+                        tension: 0.3
+                    }
+                ]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: true,
+                plugins: {
+                    legend: {
+                        position: 'top',
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { stepSize: 1 }
+                    }
                 }
-                
-                document.getElementById('respondModal').style.display = 'flex';
-            });
+            }
         });
     }
-    
-    function respondToQuery(queryId, response, newStatus) {
-        const query = studentQueries.find(q => q.id === queryId);
-        if (query) {
-            query.status = newStatus;
-            query.response = response;
-            query.responseDate = new Date().toLocaleDateString('en-US');
-            saveStudentQueries();
-            renderStudentQueries();
-            updateStats();
-            alert(`✅ Response sent to student! Query status updated to ${newStatus}.`);
+
+    function refreshChart() {
+        if (trendChart) {
+            trendChart.destroy();
         }
+        location.reload();
     }
-    
-    // Common issues stats
-    function renderCommonIssues() {
-        const issues = {
-            'Fee payment not reflected': studentQueries.filter(q => q.title.includes('payment')).length,
-            'Library fee issues': studentQueries.filter(q => q.title.includes('Library')).length,
-            'Scholarship inquiries': studentQueries.filter(q => q.title.includes('Scholarship')).length,
-            'Balance confirmation': studentQueries.filter(q => q.title.includes('balance')).length
-        };
-        const container = document.getElementById('commonIssues');
-        container.innerHTML = `<div class="stats-row">${Object.entries(issues).map(([issue, count]) => `<div class="stat-card"><div class="stat-number">${count}</div><div style="font-size:0.75rem;">${issue}</div></div>`).join('')}</div>`;
-    }
-    
-    // Tab switching
-    document.querySelectorAll('.ticket-tab').forEach(tab => {
-        tab.addEventListener('click', () => {
-            document.querySelectorAll('.ticket-tab').forEach(t => t.classList.remove('active'));
-            tab.classList.add('active');
-            currentFilter = tab.dataset.filter;
-            renderStudentQueries();
-        });
-    });
-    
-    // Modal handlers
-    document.querySelectorAll('.close-modal, #cancelModalBtn').forEach(el => {
-        el.addEventListener('click', () => document.getElementById('respondModal').style.display = 'none');
-    });
-    
-    document.getElementById('respondForm').addEventListener('submit', (e) => {
-        e.preventDefault();
-        const response = document.getElementById('responseMsg').value;
-        const status = document.getElementById('responseStatus').value;
-        if (!response) { alert('Please write a response'); return; }
-        respondToQuery(currentQueryId, response, status);
-        document.getElementById('respondModal').style.display = 'none';
-        document.getElementById('responseMsg').value = '';
-    });
-    
-    document.getElementById('refreshBtn').addEventListener('click', () => renderStudentQueries());
-    
-    // Initialize
-    updateStats();
-    renderStudentQueries();
-    renderCommonIssues();
-    
-    document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        sessionStorage.clear();
-        window.location.href = 'login.html';
-    });
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initChart);
 </script>
 </body>
 </html>

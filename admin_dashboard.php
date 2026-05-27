@@ -154,12 +154,12 @@ while ($row = mysqli_fetch_assoc($res2)) {
                         <tr><td colspan="6">No tickets found.<?php else: ?>
                         <?php foreach ($recent_tickets as $t): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($t['ticket_no']); ?>侧
-                            <td><?php echo htmlspecialchars($t['student_name'] ?? 'Unknown'); ?>侧
-                            <td><?php echo htmlspecialchars(substr($t['title'], 0, 40)); ?>侧
-                            <td><?php echo htmlspecialchars($t['department_name'] ?? 'Unassigned'); ?>侧
-                            <td><span class="status-badge <?php echo ($t['status'] == 'resolved') ? 'status-resolved' : ''; ?>"><?php echo ucfirst(str_replace('_', ' ', $t['status'])); ?></span>侧
-                            <td><?php echo date('d/m/Y', strtotime($t['created_at'])); ?>侧
+                            <td><?php echo htmlspecialchars($t['ticket_no']); ?>
+                            <td><?php echo htmlspecialchars($t['student_name'] ?? 'Unknown'); ?>
+                            <td><?php echo htmlspecialchars(substr($t['title'], 0, 40)); ?>
+                            <td><?php echo htmlspecialchars($t['department_name'] ?? 'Unassigned'); ?>
+                            <td><span class="status-badge <?php echo ($t['status'] == 'resolved') ? 'status-resolved' : ''; ?>"><?php echo ucfirst(str_replace('_', ' ', $t['status'])); ?></span>
+                            <td><?php echo date('d/m/Y', strtotime($t['created_at'])); ?>
                         </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
