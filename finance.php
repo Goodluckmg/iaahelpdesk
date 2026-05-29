@@ -480,6 +480,7 @@ $issues = mysqli_fetch_assoc($issues_result);
                     <a href="fin_reports.php" class="btn-primary" style="background:#3498db; justify-content:center;">
                         <i class="fas fa-download"></i> Generate Report
                     </a>
+                     <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
                 </div>
             </div>
         </div>

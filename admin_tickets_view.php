@@ -210,7 +210,7 @@ while ($row = mysqli_fetch_assoc($result)) {
                                         <span style="color:#94a3b8; font-size:0.7rem;">No document</span>
                                     <?php endif; ?>
                                 
-                                <td><?php echo date('d/m/Y', strtotime($t['created_at'])); ?>侧
+                                <td><?php echo date('d/m/Y', strtotime($t['created_at'])); ?>
                                 <td>
                                     <button class="btn-primary btn-sm view-ticket" data-id="<?php echo $t['id']; ?>" data-title="<?php echo htmlspecialchars($t['title']); ?>">
                                         <i class="fas fa-info-circle"></i> Details
