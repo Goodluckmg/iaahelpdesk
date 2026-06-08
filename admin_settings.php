@@ -9,15 +9,31 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 // 2. Angalia kama ana role ya admin (super_admin au admin)
 if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
-    header("Location: student_dashboard.php");
+    header("Location: student/student_index.php");
     exit();
 }
 
 require_once 'config/database.php';
 
-// ========== ADD THIS LINE ==========
-$logged_user_id = $_SESSION['student_id'];
-// ===================================
+// ========== FIXED: Admin ID handling ==========
+$logged_user_id = $_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? null;
+
+if (!$logged_user_id) {
+    session_destroy();
+    header("Location: login.php");
+    exit();
+}
+
+// ========== GET PROFILE PHOTO - FIXED ==========
+$photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
+$photo_result = mysqli_query($conn, $photo_query);
+
+if ($photo_result && mysqli_num_rows($photo_result) > 0) {
+    $admin_data = mysqli_fetch_assoc($photo_result);
+    $current_photo = $admin_data['profile_photo'] ?? null;
+} else {
+    $current_photo = null;
+}
 
 // Create settings table if not exists
 $create_table = "
@@ -60,23 +76,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_settings'])) {
     exit();
 }
 
-// Get profile photo
-$photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
-$photo_result = mysqli_query($conn, $photo_query);
-$admin_data = mysqli_fetch_assoc($photo_result);
-$current_photo = $admin_data['profile_photo'] ?? null;
-
-// Handle clear all data
+// ========== FIXED: Clear all data (only existing tables) ==========
 if (isset($_GET['clear_data'])) {
-    // Clear all tables except students and system_settings
+    // Clear only tables that exist in your database
     mysqli_query($conn, "DELETE FROM tickets");
+    mysqli_query($conn, "DELETE FROM ticket_replies");
     mysqli_query($conn, "DELETE FROM responses");
     mysqli_query($conn, "DELETE FROM ratings");
-    mysqli_query($conn, "DELETE FROM notifications");
+    mysqli_query($conn, "DELETE FROM feedback");
     mysqli_query($conn, "DELETE FROM startup_opportunities");
     mysqli_query($conn, "DELETE FROM startup_ideas");
-    mysqli_query($conn, "DELETE FROM courses");
-    mysqli_query($conn, "DELETE FROM system_logs");
+    mysqli_query($conn, "DELETE FROM knowledge_base");
+    
+    // Reset AUTO_INCREMENT values
+    mysqli_query($conn, "ALTER TABLE tickets AUTO_INCREMENT = 1");
+    mysqli_query($conn, "ALTER TABLE ticket_replies AUTO_INCREMENT = 1");
+    mysqli_query($conn, "ALTER TABLE responses AUTO_INCREMENT = 1");
+    mysqli_query($conn, "ALTER TABLE startup_opportunities AUTO_INCREMENT = 1");
+    mysqli_query($conn, "ALTER TABLE startup_ideas AUTO_INCREMENT = 1");
     
     $_SESSION['success'] = "All system data cleared successfully!";
     header("Location: admin_settings.php");
@@ -104,16 +121,39 @@ $maintenance_mode = $settings['maintenance_mode'] ?? 'off';
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IAA Helpdesk | System Settings</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/admin.css">
     <style>
-        .message { padding: 10px 14px; border-radius: 12px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
-        .message.show { display: flex; }
-        .message-success { background: #d9f0e5; color: #1d6f42; }
-        .message-error { background: #fde8e8; color: #c0392b; }
-        hr { margin: 20px 0; border: none; border-top: 1px solid #e2edf2; }
-        .avatar { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .app-container { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: #0a1c2a; color: #e0edf5; display: flex; flex-direction: column; overflow-y: auto; }
+        .profile-area { padding: 25px 20px; text-align: center; border-bottom: 1px solid #1a3a4f; }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e74c3c, #c0392b); }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .avatar i { font-size: 35px; color: white; }
+        .avatar i { font-size: 40px; color: white; }
+        .welcome-text { font-size: 0.85rem; color: #94a3b8; }
+        .user-name { font-size: 1.2rem; font-weight: 600; margin: 5px 0; }
+        .user-role { font-size: 0.7rem; background: #2c7da0; display: inline-block; padding: 3px 12px; border-radius: 20px; }
+        .user-id { font-size: 0.7rem; margin-top: 8px; color: #94a3b8; }
+        .nav-menu { flex: 1; padding: 15px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 15px; border-radius: 10px; color: #cbdbe6; text-decoration: none; margin-bottom: 5px; transition: 0.2s; }
+        .nav-item:hover { background: #1a3a4f; color: white; }
+        .nav-item.active { background: #2c7da0; color: white; }
+        .logout-item { margin-top: auto; border-top: 1px solid #1a3a4f; padding-top: 15px; }
+        .main-content { flex: 1; padding: 20px 25px; background: #f8fafc; overflow-y: auto; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .page-title { font-size: 1.6rem; color: #0a2b38; }
+        .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; }
+        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2edf2; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .form-group { margin-bottom: 15px; }
+        .form-group label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.85rem; }
+        input, select { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #cbdbe6; outline: none; }
+        .btn-primary { background: #2c7da0; border: none; padding: 10px 20px; border-radius: 30px; color: white; cursor: pointer; font-size: 0.85rem; text-decoration: none; display: inline-block; }
+        .btn-danger { background: #c0392b; }
+        hr { margin: 20px 0; border: none; border-top: 1px solid #e2edf2; }
+        .message { padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
+        .message-success { background: #d9f0e5; color: #1d6f42; border-left: 4px solid #1d6f42; }
+        .message-error { background: #fde8e8; color: #c0392b; border-left: 4px solid #c0392b; }
+        @media (max-width: 768px) { .sidebar { width: 70px; } .sidebar span { display: none; } }
     </style>
 </head>
 <body>
@@ -122,26 +162,26 @@ $maintenance_mode = $settings['maintenance_mode'] ?? 'off';
         <div class="profile-area">
             <div class="avatar">
                 <?php if ($current_photo): ?>
-                    <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo">
+                    <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($current_photo); ?>" alt="Profile Photo">
                 <?php else: ?>
                     <i class="fas fa-user-shield"></i>
                 <?php endif; ?>
             </div>
             <div class="welcome-text">Welcome,</div>
-            <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
+            <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname'] ?? 'Admin'); ?></div>
             <div class="user-role"><?php echo ($_SESSION['role'] == 'super_admin') ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
-            <div class="user-id"><?php echo htmlspecialchars($_SESSION['reg_no']); ?></div>
+            <div class="user-id"><?php echo htmlspecialchars($_SESSION['reg_no'] ?? ''); ?></div>
         </div>
         <div class="nav-menu">
-            <a href="admin_dashboard.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
-            <a href="admin_users_management.php" class="nav-item"><i class="fas fa-users"></i><span class="nav-label">User Management</span></a>
-            <a href="admin_tickets_view.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">All Tickets</span></a>
-            <a href="admin_departments.php" class="nav-item"><i class="fas fa-building"></i><span class="nav-label">Departments</span></a>
-            <a href="admin_edit.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
-            <a href="admin_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
-            <a href="admin_analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Analytics</span></a>
-            <a href="admin_settings.php" class="nav-item active"><i class="fas fa-cog"></i><span class="nav-label">System Settings</span></a>
-            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <a href="admin_dashboard.php" class="nav-item"><i class="fas fa-chart-pie"></i><span>Dashboard</span></a>
+            <a href="admin_users_management.php" class="nav-item"><i class="fas fa-users"></i><span>User Management</span></a>
+            <a href="admin_tickets_view.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span>All Tickets</span></a>
+            <a href="admin_departments.php" class="nav-item"><i class="fas fa-building"></i><span>Departments</span></a>
+            <a href="admin_edit.php" class="nav-item"><i class="fas fa-camera"></i><span>Edit Photo</span></a>
+            <a href="admin_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span>Startup Hub</span></a>
+            <a href="admin_analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+            <a href="admin_settings.php" class="nav-item active"><i class="fas fa-cog"></i><span>System Settings</span></a>
+            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></div>
         </div>
     </aside>
 
@@ -152,10 +192,10 @@ $maintenance_mode = $settings['maintenance_mode'] ?? 'off';
         </div>
 
         <?php if (isset($_SESSION['success'])): ?>
-            <div class="message message-success show"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
+            <div class="message message-success"><?php echo $_SESSION['success']; unset($_SESSION['success']); ?></div>
         <?php endif; ?>
         <?php if (isset($_SESSION['error'])): ?>
-            <div class="message message-error show"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
+            <div class="message message-error"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
         <?php endif; ?>
 
         <div class="widget-card">
@@ -182,8 +222,11 @@ $maintenance_mode = $settings['maintenance_mode'] ?? 'off';
                 </div>
                 <button type="submit" name="save_settings" class="btn-primary">Save Settings</button>
             </form>
+            
+            <?php if ($_SESSION['role'] == 'super_admin'): ?>
             <hr>
-            <a href="?clear_data=1" onclick="return confirm('WARNING: This will delete ALL tickets, responses, ratings, notifications, and logs! Are you sure?')" class="btn-danger btn-primary" style="background:#c0392b; text-decoration:none; display:inline-block;">⚠️ Clear All System Data</a>
+            <a href="?clear_data=1" onclick="return confirm('WARNING: This will delete ALL tickets, replies, responses, ratings, feedback, and startup data! Are you sure?')" class="btn-primary btn-danger" style="background:#c0392b;">⚠️ Clear All System Data</a>
+            <?php endif; ?>
         </div>
     </main>
 </div>

@@ -442,3 +442,26 @@ body {
 .mb-2 {
     margin-bottom: 10px;
 }
+/* Add this to your existing login.css file */
+
+/* After removing role select, adjust form group margin */
+.form-group:last-of-type {
+    margin-bottom: 15px;
+}
+
+/* Optional: Make the login card slightly more compact */
+.login-card {
+    padding: 35px 30px;
+}
+
+/* Ensure the input icon and input alignment is perfect */
+.input-wrapper i.input-icon {
+    font-size: 0.95rem;
+}
+
+/* Small screen adjustment after removing role select */
+@media (max-width: 550px) {
+    .form-group:last-of-type {
+        margin-bottom: 12px;
+    }
+}

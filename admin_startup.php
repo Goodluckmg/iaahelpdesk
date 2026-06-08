@@ -9,59 +9,35 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 // 2. Angalia kama ana role ya admin (super_admin au admin)
 if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
-    header("Location: student_dashboard.php");
+    header("Location: student/student_index.php");
     exit();
 }
 
 require_once 'config/database.php';
 
-// ========== ADD THIS LINE ==========
-$logged_user_id = $_SESSION['student_id'];
-// ===================================
+// ========== FIXED: Admin ID handling (BADILISHA HIVI) ==========
+$logged_user_id = $_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? null;
 
-// Get profile photo
+if (!$logged_user_id) {
+    session_destroy();
+    header("Location: login.php");
+    exit();
+}
+
+// ========== GET PROFILE PHOTO - FIXED ==========
 $photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
 $photo_result = mysqli_query($conn, $photo_query);
-$admin_data = mysqli_fetch_assoc($photo_result);
-$current_photo = $admin_data['profile_photo'] ?? null;
 
-// Create tables if not exists
-$create_ideas_table = "
-CREATE TABLE IF NOT EXISTS startup_ideas (
-    id INT(11) NOT NULL AUTO_INCREMENT,
-    user_id INT(11) NOT NULL,
-    student_name VARCHAR(100) DEFAULT NULL,
-    student_reg VARCHAR(50) DEFAULT NULL,
-    title VARCHAR(200) NOT NULL,
-    category VARCHAR(100) NOT NULL,
-    description TEXT NOT NULL,
-    resources_needed TEXT DEFAULT NULL,
-    status ENUM('pending', 'approved', 'rejected') DEFAULT 'pending',
-    admin_comment TEXT DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    INDEX idx_user_id (user_id),
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-mysqli_query($conn, $create_ideas_table);
+if ($photo_result && mysqli_num_rows($photo_result) > 0) {
+    $admin_data = mysqli_fetch_assoc($photo_result);
+    $current_photo = $admin_data['profile_photo'] ?? null;
+} else {
+    $current_photo = null;
+}
 
-$create_opportunities_table = "
-CREATE TABLE IF NOT EXISTS startup_opportunities (
-    id INT(11) NOT NULL AUTO_INCREMENT,
-    title VARCHAR(200) NOT NULL,
-    type ENUM('job', 'training', 'internship') NOT NULL,
-    category VARCHAR(50) DEFAULT NULL,
-    description TEXT NOT NULL,
-    deadline DATE DEFAULT NULL,
-    contact_info VARCHAR(200) DEFAULT NULL,
-    status ENUM('active', 'expired', 'closed') DEFAULT 'active',
-    created_by INT(11) DEFAULT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    PRIMARY KEY (id),
-    INDEX idx_type (type),
-    INDEX idx_status (status)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci";
-mysqli_query($conn, $create_opportunities_table);
+// ========== REMOVE TABLE CREATION CODE (Ishafanywa kwenye database) ==========
+// Tumekwisha kuunda tables kwenye phpMyAdmin, hivyo code hizi za kuunda tables zinaweza kuondolewa
+// au ziachwe lakini hazitasababisha error
 
 // Handle idea status update (approve/reject)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -87,7 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $description = mysqli_real_escape_string($conn, $_POST['description']);
         $contact = mysqli_real_escape_string($conn, $_POST['contact']);
         $deadline = mysqli_real_escape_string($conn, $_POST['deadline']);
-        $created_by = $_SESSION['student_id'];
+        $created_by = $logged_user_id;  // FIXED: Use $logged_user_id
         
         $insert = "INSERT INTO startup_opportunities (title, type, category, description, deadline, contact_info, created_by) 
                    VALUES ('$title', '$type', '$category', '$description', '$deadline', '$contact', '$created_by')";
@@ -135,6 +111,7 @@ $approved_ideas = count(array_filter($ideas, function($i) { return $i['status'] 
 $total_opportunities = count($opportunities);
 ?>
 
+<!-- HTML yako inabaki SAWA kabisa kuanzia hapa -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -143,8 +120,27 @@ $total_opportunities = count($opportunities);
     <title>IAA Helpdesk | Admin - Startup Hub Management</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-    <link rel="stylesheet" href="css/admin.css">
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .app-container { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: #0a1c2a; color: #e0edf5; display: flex; flex-direction: column; overflow-y: auto; }
+        .profile-area { padding: 25px 20px; text-align: center; border-bottom: 1px solid #1a3a4f; }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar i { font-size: 40px; color: white; }
+        .welcome-text { font-size: 0.85rem; color: #94a3b8; }
+        .user-name { font-size: 1.2rem; font-weight: 600; margin: 5px 0; }
+        .user-role { font-size: 0.7rem; background: #2c7da0; display: inline-block; padding: 3px 12px; border-radius: 20px; }
+        .user-id { font-size: 0.7rem; margin-top: 8px; color: #94a3b8; }
+        .nav-menu { flex: 1; padding: 15px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 15px; border-radius: 10px; color: #cbdbe6; text-decoration: none; margin-bottom: 5px; transition: 0.2s; }
+        .nav-item:hover { background: #1a3a4f; color: white; }
+        .nav-item.active { background: #2c7da0; color: white; }
+        .logout-item { margin-top: auto; border-top: 1px solid #1a3a4f; padding-top: 15px; }
+        .main-content { flex: 1; padding: 20px 25px; background: #f8fafc; overflow-y: auto; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .page-title { font-size: 1.6rem; color: #0a2b38; }
+        .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; }
         .startup-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
         .stat-card { background: white; border-radius: 20px; padding: 18px; border-left: 4px solid #e74c3c; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .stat-number { font-size: 1.8rem; font-weight: 800; color: #c0392b; margin-top: 5px; }
@@ -154,20 +150,23 @@ $total_opportunities = count($opportunities);
         .status-badge-approved { background: #d9f0e5; color: #1d6f42; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; }
         .status-badge-rejected { background: #fde8e8; color: #c0392b; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; }
         .btn-sm { padding: 5px 12px; font-size: 0.7rem; margin: 2px; }
+        .btn-primary { background: #2c7da0; border: none; padding: 8px 18px; border-radius: 30px; color: white; cursor: pointer; text-decoration: none; font-size: 0.8rem; display: inline-block; }
+        .btn-success { background: #27ae60; color: white; border: none; padding: 8px 16px; border-radius: 30px; cursor: pointer; }
+        .btn-danger { background: #c0392b; color: white; border: none; padding: 8px 16px; border-radius: 30px; cursor: pointer; }
         .form-container { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2edf2; }
         .form-row { display: flex; gap: 15px; flex-wrap: wrap; margin-bottom: 15px; }
         .form-row .form-group { flex: 1; margin-bottom: 0; }
+        .form-group label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.85rem; }
+        input, select, textarea { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #cbdbe6; outline: none; }
         .startup-tabs { display: flex; gap: 5px; margin-bottom: 20px; background: white; padding: 5px; border-radius: 15px; border: 1px solid #e2edf2; }
         .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
         .tab-btn.active { background: #e74c3c; color: white; }
-        .tab-btn:hover:not(.active) { background: #fde8e8; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: white; border-radius: 20px; padding: 25px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
         .close-modal { cursor: pointer; font-size: 1.5rem; color: #7f8c8d; }
-        .close-modal:hover { color: #c0392b; }
-        .btn-success { background: #27ae60; color: white; border: none; padding: 8px 16px; border-radius: 30px; cursor: pointer; }
-        .btn-danger { background: #c0392b; color: white; border: none; padding: 8px 16px; border-radius: 30px; cursor: pointer; }
+        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2edf2; }
+        @media (max-width: 768px) { .sidebar { width: 70px; } .sidebar span { display: none; } }
     </style>
 </head>
 <body>
@@ -176,26 +175,26 @@ $total_opportunities = count($opportunities);
         <div class="profile-area">
             <div class="avatar">
                 <?php if ($current_photo): ?>
-                    <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
+                    <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($current_photo); ?>" alt="Profile Photo">
                 <?php else: ?>
                     <i class="fas fa-user-shield"></i>
                 <?php endif; ?>
             </div>
             <div class="welcome-text">Welcome,</div>
-            <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
+            <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname'] ?? 'Admin'); ?></div>
             <div class="user-role"><?php echo ($_SESSION['role'] == 'super_admin') ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
-            <div class="user-id"><?php echo htmlspecialchars($_SESSION['reg_no']); ?></div>
+            <div class="user-id"><?php echo htmlspecialchars($_SESSION['reg_no'] ?? ''); ?></div>
         </div>
         <div class="nav-menu">
-            <a href="admin_dashboard.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
-            <a href="admin_users_management.php" class="nav-item"><i class="fas fa-users"></i><span class="nav-label">User Management</span></a>
-            <a href="admin_tickets_view.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">All Tickets</span></a>
-            <a href="admin_departments.php" class="nav-item"><i class="fas fa-building"></i><span class="nav-label">Departments</span></a>
-            <a href="admin_edit.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
-            <a href="admin_startup.php" class="nav-item active"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
-            <a href="admin_analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Analytics</span></a>
-            <a href="admin_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">System Settings</span></a>
-            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <a href="admin_dashboard.php" class="nav-item"><i class="fas fa-chart-pie"></i><span>Dashboard</span></a>
+            <a href="admin_users_management.php" class="nav-item"><i class="fas fa-users"></i><span>User Management</span></a>
+            <a href="admin_tickets_view.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span>All Tickets</span></a>
+            <a href="admin_departments.php" class="nav-item"><i class="fas fa-building"></i><span>Departments</span></a>
+            <a href="admin_edit.php" class="nav-item"><i class="fas fa-camera"></i><span>Edit Photo</span></a>
+            <a href="admin_startup.php" class="nav-item active"><i class="fas fa-rocket"></i><span>Startup Hub</span></a>
+            <a href="admin_analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+            <a href="admin_settings.php" class="nav-item"><i class="fas fa-cog"></i><span>System Settings</span></a>
+            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></div>
         </div>
     </aside>
 
@@ -231,7 +230,7 @@ $total_opportunities = count($opportunities);
             </div>
             <div id="ideasListContainer">
                 <?php foreach ($ideas as $idea): ?>
-                <div class="idea-card" data-status="<?php echo $idea['status']; ?>" data-category="<?php echo $idea['category']; ?>">
+                <div class="idea-card">
                     <div class="card-header">
                         <strong>#<?php echo $idea['id']; ?> - <?php echo htmlspecialchars($idea['title']); ?></strong>
                         <span class="status-badge-<?php echo $idea['status'] == 'pending' ? 'pending' : ($idea['status'] == 'approved' ? 'approved' : 'rejected'); ?>">

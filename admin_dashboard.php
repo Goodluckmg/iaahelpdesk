@@ -9,28 +9,45 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 // 2. Angalia kama ana role ya admin (super_admin au admin)
 if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
-    header("Location: student_dashboard.php");
+    header("Location: student/student_index.php");
     exit();
 }
 
 require_once 'config/database.php';
 
-$logged_user_id = $_SESSION['student_id'];
+// ========== FIXED: Admin ID handling ==========
+// Admin anaweza kuwa na user_id (kutoka login_process) au admin_id
+$logged_user_id = $_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? null;
+
+// Kama hakuna ID, logout
+if (!$logged_user_id) {
+    session_destroy();
+    header("Location: login.php");
+    exit();
+}
+
 $logged_role = $_SESSION['role'];
 $is_super_admin = ($logged_role === 'super_admin');
 
-// Get profile photo
+// ========== GET PROFILE PHOTO - FIXED ==========
+// Query from students table (admin yupo kwenye students table)
 $photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
 $photo_result = mysqli_query($conn, $photo_query);
-$admin_data = mysqli_fetch_assoc($photo_result);
-$current_photo = $admin_data['profile_photo'] ?? null;
+
+if ($photo_result && mysqli_num_rows($photo_result) > 0) {
+    $admin_data = mysqli_fetch_assoc($photo_result);
+    $current_photo = $admin_data['profile_photo'] ?? null;
+} else {
+    $current_photo = null;
+}
+// ============================================
 
 // --- STATISTICS KUTOKA DATABASE ---
-$total_users = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM students"))['total'];
+$total_users = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM students WHERE role = 'student'"))['total'];
 $total_tickets = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM tickets"))['total'];
 $open_tickets = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM tickets WHERE status IN ('open','pending')"))['total'];
 $resolved_tickets = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM tickets WHERE status = 'resolved'"))['total'];
-$total_depts = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM departments"))['total'];
+$total_depts = mysqli_fetch_assoc(mysqli_query($conn, "SELECT COUNT(*) as total FROM departments WHERE status = 'active'"))['total'];
 $resolution_rate = ($total_tickets > 0) ? round(($resolved_tickets / $total_tickets) * 100) : 0;
 
 // Tiketi 10 za hivi karibuni
@@ -67,36 +84,41 @@ while ($row = mysqli_fetch_assoc($res2)) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IAA Helpdesk | Admin Dashboard</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/admin.css">
     <style>
-        /* Quick fallback styles if admin.css is missing */
+        /* Quick fallback styles */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .app-container { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: #0a1c2a; color: #e0edf5; display: flex; flex-direction: column; overflow-y: auto; }
+        .profile-area { padding: 25px 20px; text-align: center; border-bottom: 1px solid #1a3a4f; }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar i { font-size: 40px; color: white; }
+        .welcome-text { font-size: 0.85rem; color: #94a3b8; }
+        .user-name { font-size: 1.2rem; font-weight: 600; margin: 5px 0; }
+        .user-role { font-size: 0.7rem; background: #2c7da0; display: inline-block; padding: 3px 12px; border-radius: 20px; }
+        .user-id { font-size: 0.7rem; margin-top: 8px; color: #94a3b8; }
+        .nav-menu { flex: 1; padding: 15px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 15px; border-radius: 10px; color: #cbdbe6; text-decoration: none; margin-bottom: 5px; transition: 0.2s; }
+        .nav-item:hover { background: #1a3a4f; color: white; }
+        .nav-item.active { background: #2c7da0; color: white; }
+        .logout-item { margin-top: auto; border-top: 1px solid #1a3a4f; padding-top: 15px; }
+        .main-content { flex: 1; padding: 20px 25px; background: #f8fafc; overflow-y: auto; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .page-title { font-size: 1.6rem; color: #0a2b38; }
+        .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
         .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 25px; }
         .stat-card { background: white; border-radius: 20px; padding: 18px; border-left: 4px solid #e74c3c; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
         .stat-number { font-size: 1.8rem; font-weight: 800; color: #c0392b; margin-top: 5px; }
-        .widget-card { background: white; border-radius: 20px; padding: 18px; margin-bottom: 20px; border: 1px solid #e2edf2; }
+        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2edf2; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
         table { width: 100%; border-collapse: collapse; }
-        th, td { text-align: left; padding: 10px 8px; border-bottom: 1px solid #e9eef3; font-size: 0.8rem; }
-        th { background: #f1f5f9; }
-        .status-badge { background: #e0f0f5; color: #165a72; padding: 3px 10px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
+        th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e9eef3; font-size: 0.85rem; }
+        th { background: #f1f5f9; font-weight: 600; }
+        .status-badge { background: #e0f0f5; color: #165a72; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
         .status-resolved { background: #d9f0e5; color: #1d6f42; }
-        .btn-primary { background: #e74c3c; border: none; padding: 8px 18px; border-radius: 30px; color: white; cursor: pointer; }
+        .btn-primary { background: #e74c3c; border: none; padding: 8px 18px; border-radius: 30px; color: white; cursor: pointer; text-decoration: none; font-size: 0.8rem; display: inline-block; }
         .btn-primary:hover { background: #c0392b; }
-        .sidebar { width: 280px; background: #0a1c2a; color: #e0edf5; display: flex; flex-direction: column; }
-        .profile-area { padding: 25px 20px; text-align: center; }
-        .avatar { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e74c3c, #c0392b); }
-        .avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .avatar i { font-size: 35px; color: white; }
-        .nav-menu { flex: 1; padding: 15px; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 15px; border-radius: 10px; color: #cbdbe6; text-decoration: none; }
-        .role-admin { background: #2c7da0; color: #fff; }
-        .nav-item.active { background: ; color: white; }
-        .logout-item { margin-top: auto; border-top: 1px solid #2c3e50; padding-top: 15px; }
-        .main-content { flex: 1; padding: 20px 25px; background: #f8fafc; overflow-y: auto; }
-        .top-bar { display: flex; justify-content: space-between; margin-bottom: 25px; }
-        .page-title { font-size: 1.6rem; color: #0a2b38; }
-        .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; }
-        .app-container { display: flex; height: 100vh; }
+        @media (max-width: 768px) { .sidebar { width: 70px; } .sidebar span, .welcome-text, .user-name, .user-role, .user-id { display: none; } .nav-item { justify-content: center; } }
     </style>
 </head>
 <body>
@@ -105,15 +127,15 @@ while ($row = mysqli_fetch_assoc($res2)) {
         <div class="profile-area">
             <div class="avatar">
                 <?php if ($current_photo): ?>
-                    <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo">
+                    <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($current_photo); ?>" alt="Profile Photo">
                 <?php else: ?>
                     <i class="fas fa-user-shield"></i>
                 <?php endif; ?>
             </div>
             <div class="welcome-text">Welcome,</div>
-            <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
+            <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname'] ?? 'Admin'); ?></div>
             <div class="user-role"><?php echo $is_super_admin ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
-            <div class="user-id"><?php echo htmlspecialchars($_SESSION['reg_no']); ?></div>
+            <div class="user-id"><?php echo htmlspecialchars($_SESSION['reg_no'] ?? ''); ?></div>
         </div>
         <div class="nav-menu">
             <a href="admin_dashboard.php" class="nav-item active"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
@@ -135,7 +157,7 @@ while ($row = mysqli_fetch_assoc($res2)) {
         </div>
 
         <div class="stats-row">
-            <div class="stat-card"><i class="fas fa-users"></i><div class="stat-number"><?php echo $total_users; ?></div><div>Total Users</div></div>
+            <div class="stat-card"><i class="fas fa-users"></i><div class="stat-number"><?php echo $total_users; ?></div><div>Total Students</div></div>
             <div class="stat-card"><i class="fas fa-ticket-alt"></i><div class="stat-number"><?php echo $total_tickets; ?></div><div>Total Tickets</div></div>
             <div class="stat-card"><i class="fas fa-clock"></i><div class="stat-number"><?php echo $open_tickets; ?></div><div>Open Tickets</div></div>
             <div class="stat-card"><i class="fas fa-check-circle"></i><div class="stat-number"><?php echo $resolved_tickets; ?></div><div>Resolved</div></div>
@@ -149,18 +171,19 @@ while ($row = mysqli_fetch_assoc($res2)) {
                 <a href="admin_tickets_view.php" class="btn-primary">View All</a>
             </div>
             <table>
-                <thead><tr><th>Ticket No</th><th>Student</th><th>Subject</th><th>Department</th><th>Status</th><th>Date</th></tr></thead>
+                <thead><tr><th>Ticket No</th><th>Student</th><th>Subject</th><th>Department</th><th>Status</th><th>Date</th></thead>
                 <tbody>
                     <?php if (empty($recent_tickets)): ?>
-                        <tr><td colspan="6">No tickets found.<?php else: ?>
+                        <tr><td colspan="6" style="text-align: center;">No tickets found.</td></tr>
+                    <?php else: ?>
                         <?php foreach ($recent_tickets as $t): ?>
                         <tr>
-                            <td><?php echo htmlspecialchars($t['ticket_no']); ?>
-                            <td><?php echo htmlspecialchars($t['student_name'] ?? 'Unknown'); ?>
-                            <td><?php echo htmlspecialchars(substr($t['title'], 0, 40)); ?>
-                            <td><?php echo htmlspecialchars($t['department_name'] ?? 'Unassigned'); ?>
-                            <td><span class="status-badge <?php echo ($t['status'] == 'resolved') ? 'status-resolved' : ''; ?>"><?php echo ucfirst(str_replace('_', ' ', $t['status'])); ?></span>
-                            <td><?php echo date('d/m/Y', strtotime($t['created_at'])); ?>
+                            <td><?php echo htmlspecialchars($t['ticket_no']); ?></td>
+                            <td><?php echo htmlspecialchars($t['student_name'] ?? 'Unknown'); ?></td>
+                            <td><?php echo htmlspecialchars(substr($t['title'], 0, 40)); ?>...</td>
+                            <td><?php echo htmlspecialchars($t['department_name'] ?? 'Unassigned'); ?></td>
+                            <td><span class="status-badge <?php echo ($t['status'] == 'resolved') ? 'status-resolved' : ''; ?>"><?php echo ucfirst(str_replace('_', ' ', $t['status'])); ?></span></td>
+                            <td><?php echo date('d/m/Y', strtotime($t['created_at'])); ?></td>
                         </tr>
                         <?php endforeach; ?>
                     <?php endif; ?>
@@ -169,7 +192,7 @@ while ($row = mysqli_fetch_assoc($res2)) {
         </div>
 
         <div class="widget-card">
-            <div class="flex-between"><strong>📊 Statistics by Department</strong></div>
+            <div class="flex-between"><strong>📊 Tickets by Department</strong></div>
             <div class="stats-row">
                 <?php foreach ($dept_stats as $dept): ?>
                 <div class="stat-card">

@@ -7,7 +7,7 @@ session_start();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IAA Student Helpdesk | Login</title>
+    <title>IAA Helpdesk | Login</title>
     <!-- Font Awesome Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <!-- External CSS - Separated -->
@@ -42,13 +42,13 @@ session_start();
             <img src="img/iaalogo.jpg" alt="IAA Logo" class="custom-logo"> 
         </div>
         <h1>Institute of Accountancy Arusha</h1>
-        <p>Student Digital Helpdesk & Query Management System</p>
+        <p>Digital Helpdesk & Query Management System</p>
     </div>
 
     <!-- LOGIN CARD -->
     <div class="login-card">
         <h2>Welcome Back</h2>
-        <p class="subtitle">Login to access your helpdesk portal</p>
+        <p class="subtitle">Login to access your portal</p>
 
         <!-- Sehemu ya kuonyesha ujumbe (kutoka kwa PHP) -->
         <?php if (isset($_SESSION['error'])): ?>
@@ -64,14 +64,14 @@ session_start();
             </div>
         <?php endif; ?>
 
-        <!-- Login Form - Sasa inatuma data kwa login_process.php -->
+        <!-- Login Form - Inatuma data kwa login_process.php -->
         <form id="loginForm" action="login_process.php" method="POST">
-            <!-- Registration Number -->
+            <!-- Registration Number / Staff ID / Username -->
             <div class="form-group">
-                <label><i class="fas fa-id-card"></i> Registration Number</label>
+                <label><i class="fas fa-id-card"></i> Registration Number / Staff ID / Username</label>
                 <div class="input-wrapper">
-                    <i class="fas fa-hashtag input-icon"></i>
-                    <input type="text" id="regNo" name="reg_no" placeholder="e.g., IAA/2024/0789 or ADMIN/001" autocomplete="off" required>
+                    <i class="fas fa-user input-icon"></i>
+                    <input type="text" id="username" name="username" placeholder="e.g., IAA/2024/0789 or STAFF001 or admin" autocomplete="off" required>
                 </div>
             </div>
 
@@ -82,22 +82,6 @@ session_start();
                     <i class="fas fa-key input-icon"></i>
                     <input type="password" id="password" name="password" placeholder="Enter your password" required>
                     <i class="fas fa-eye-slash toggle-password" style="position: absolute; right: 16px; top: 50%; transform: translateY(-50%); cursor: pointer; color: #94a3b8;"></i>
-                </div>
-            </div>
-
-            <!-- Role Selection -->
-            <div class="form-group">
-                <label><i class="fas fa-users"></i> Role / Account Type</label>
-                <div class="input-wrapper">
-                    <i class="fas fa-user-tag input-icon"></i>
-                    <select id="role" name="role" required>
-                        <option value="student">🎓 Student</option>
-                        <option value="lecturer">📚 Lecturer / Academic Staff</option>
-                         <option value="super_admin">👑 Super Administrator</option>
-                        <option value="admin">⚙️ Admin</option>
-                        <option value="finance">💰 Finance Office</option>
-                        <option value="ict">💻 ICT Support</option>
-                    </select>
                 </div>
             </div>
 
@@ -118,12 +102,12 @@ session_start();
 
     <!-- Footer -->
     <div class="login-footer">
-        <p>&copy; 2024 Institute of Accountancy Arusha. All rights reserved.</p>
+        <p>&copy; 2025 Institute of Accountancy Arusha. All rights reserved.</p>
     </div>
 </div>
 
 <script>
-    // Toggle password visibility (bado inafanya kazi)
+    // Toggle password visibility
     const togglePassword = document.querySelector('.toggle-password');
     const passwordInput = document.getElementById('password');
     if (togglePassword) {
@@ -134,10 +118,6 @@ session_start();
             this.classList.toggle('fa-eye-slash');
         });
     }
-
-    // Kumbuka: Hatuwezi tena kuwa na demo-buttons za kujaza haraka kwa sababu sasa tunatumia database.
-    // Ikiwa unataka, unaweza kuwaweka kwa madhumuni ya majaribio, lakini itabidi waweke credentials halisi.
-    // Kwa sasa, nimeamua kuwaondoa ili kuepuka mkanganyiko.
 </script>
 </body>
 </html>

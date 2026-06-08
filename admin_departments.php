@@ -9,21 +9,34 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 // 2. Angalia kama ana role ya admin (super_admin au admin)
 if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
-    header("Location: student_dashboard.php");
+    header("Location: student/student_index.php");
     exit();
 }
 
 require_once 'config/database.php';
 
-$logged_user_id = $_SESSION['student_id'];
+// ========== FIXED: Admin ID handling ==========
+$logged_user_id = $_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? null;
+
+if (!$logged_user_id) {
+    session_destroy();
+    header("Location: login.php");
+    exit();
+}
+
 $logged_role = $_SESSION['role'];
 $is_super_admin = ($logged_role === 'super_admin');
 
-// Get profile photo for sidebar
+// ========== GET PROFILE PHOTO - FIXED ==========
 $photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
 $photo_result = mysqli_query($conn, $photo_query);
-$admin_data = mysqli_fetch_assoc($photo_result);
-$current_photo = $admin_data['profile_photo'] ?? null;
+
+if ($photo_result && mysqli_num_rows($photo_result) > 0) {
+    $admin_data = mysqli_fetch_assoc($photo_result);
+    $current_photo = $admin_data['profile_photo'] ?? null;
+} else {
+    $current_photo = null;
+}
 
 // Handle Add Department
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add') {
@@ -122,19 +135,38 @@ if (isset($_GET['edit'])) {
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>IAA Helpdesk | Departments</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/admin.css">
     <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .app-container { display: flex; height: 100vh; }
+        .sidebar { width: 280px; background: #0a1c2a; color: #e0edf5; display: flex; flex-direction: column; overflow-y: auto; }
+        .profile-area { padding: 25px 20px; text-align: center; border-bottom: 1px solid #1a3a4f; }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .avatar img { width: 100%; height: 100%; object-fit: cover; }
+        .avatar i { font-size: 40px; color: white; }
+        .welcome-text { font-size: 0.85rem; color: #94a3b8; }
+        .user-name { font-size: 1.2rem; font-weight: 600; margin: 5px 0; }
+        .user-role { font-size: 0.7rem; background: #2c7da0; display: inline-block; padding: 3px 12px; border-radius: 20px; }
+        .user-id { font-size: 0.7rem; margin-top: 8px; color: #94a3b8; }
+        .nav-menu { flex: 1; padding: 15px; }
+        .nav-item { display: flex; align-items: center; gap: 12px; padding: 10px 15px; border-radius: 10px; color: #cbdbe6; text-decoration: none; margin-bottom: 5px; transition: 0.2s; }
+        .nav-item:hover { background: #1a3a4f; color: white; }
+        .nav-item.active { background: #2c7da0; color: white; }
+        .logout-item { margin-top: auto; border-top: 1px solid #1a3a4f; padding-top: 15px; }
+        .main-content { flex: 1; padding: 20px 25px; background: #f8fafc; overflow-y: auto; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; }
+        .page-title { font-size: 1.6rem; color: #0a2b38; }
+        .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; }
+        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2edf2; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: white; border-radius: 20px; padding: 25px; width: 90%; max-width: 500px; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #e2edf2; }
         .close-modal, .close-dept-modal { cursor: pointer; font-size: 1.5rem; color: #7f8c8d; }
-        .close-modal:hover, .close-dept-modal:hover { color: #c0392b; }
         .form-group { margin-bottom: 15px; }
         .form-group label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.85rem; }
         input, select { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #cbdbe6; outline: none; }
-        input:focus, select:focus { border-color: #e74c3c; box-shadow: 0 0 0 2px rgba(231,76,60,0.1); }
-        .btn-primary { background: #e74c3c; border: none; padding: 8px 18px; border-radius: 30px; color: white; cursor: pointer; transition: 0.2s; }
-        .btn-primary:hover { background: #c0392b; }
+        .btn-primary { background: #2c7da0; border: none; padding: 8px 18px; border-radius: 30px; color: white; cursor: pointer; transition: 0.2s; text-decoration: none; display: inline-block; }
+        .btn-primary:hover { background: #1a5a74; }
         .btn-danger { background: #c0392b; }
         .btn-danger:hover { background: #a93226; }
         .btn-sm { padding: 5px 12px; font-size: 0.75rem; }
@@ -144,13 +176,8 @@ if (isset($_GET['edit'])) {
         table { width: 100%; border-collapse: collapse; }
         th, td { padding: 12px 10px; border-bottom: 1px solid #e2e8f0; text-align: left; }
         th { background: #f8fafc; font-weight: 600; color: #0a2b38; }
-        tr:hover { background: #f8fafc; }
+        .status-badge { background: #e3f2fd; color: #1565c0; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; display: inline-block; }
         .action-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
-        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2edf2; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; }
-        .page-title { font-size: 1.6rem; font-weight: 700; color: #0a2b38; }
-        .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; border: 1px solid #dee9f0; }
     </style>
 </head>
 <body>
@@ -158,28 +185,27 @@ if (isset($_GET['edit'])) {
     <aside class="sidebar">
         <div class="profile-area">
             <div class="avatar">
-    <?php if ($current_photo): ?>
-        <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Profile Photo" style="width: 100%; height: 100%; object-fit: cover; border-radius: 50%;">
-    <?php else: ?>
-        <i class="fas fa-user-shield"></i>
-    <?php endif; ?>
-</div>
-       
+                <?php if ($current_photo): ?>
+                    <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($current_photo); ?>" alt="Profile Photo">
+                <?php else: ?>
+                    <i class="fas fa-user-shield"></i>
+                <?php endif; ?>
+            </div>
             <div class="welcome-text">Welcome,</div>
-            <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname']); ?></div>
-            <div class="user-role"><?php echo ($_SESSION['role'] == 'super_admin') ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
-            <div class="user-id"><?php echo htmlspecialchars($_SESSION['reg_no']); ?></div>
+            <div class="user-name"><?php echo htmlspecialchars($_SESSION['fullname'] ?? 'Admin'); ?></div>
+            <div class="user-role"><?php echo $is_super_admin ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
+            <div class="user-id"><?php echo htmlspecialchars($_SESSION['reg_no'] ?? ''); ?></div>
         </div>
         <div class="nav-menu">
-            <a href="admin_dashboard.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
-            <a href="admin_users_management.php" class="nav-item"><i class="fas fa-users"></i><span class="nav-label">User Management</span></a>
-            <a href="admin_tickets_view.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">All Tickets</span></a>
-            <a href="admin_departments.php" class="nav-item active"><i class="fas fa-building"></i><span class="nav-label">Departments</span></a>
-            <a href="admin_edit.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
-            <a href="admin_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
-            <a href="admin_analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Analytics</span></a>
-            <a href="admin_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">System Settings</span></a>
-            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <a href="admin_dashboard.php" class="nav-item"><i class="fas fa-chart-pie"></i><span>Dashboard</span></a>
+            <a href="admin_users_management.php" class="nav-item"><i class="fas fa-users"></i><span>User Management</span></a>
+            <a href="admin_tickets_view.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span>All Tickets</span></a>
+            <a href="admin_departments.php" class="nav-item active"><i class="fas fa-building"></i><span>Departments</span></a>
+            <a href="admin_edit.php" class="nav-item"><i class="fas fa-camera"></i><span>Edit Photo</span></a>
+            <a href="admin_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span>Startup Hub</span></a>
+            <a href="admin_analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
+            <a href="admin_settings.php" class="nav-item"><i class="fas fa-cog"></i><span>System Settings</span></a>
+            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></div>
         </div>
     </aside>
 
@@ -209,37 +235,26 @@ if (isset($_GET['edit'])) {
                 </div>
             <?php else: ?>
                 <div style="overflow-x: auto;">
-                    <table id="deptsTable">
+                    <table>
                         <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Department Name</th>
-                                <th>Head of Department</th>
-                                <th>Email</th>
-                                <th>Tickets</th>
-                                <th>Actions</th>
-                            </thead>
+                            <tr><th>ID</th><th>Department Name</th><th>Head of Department</th><th>Email</th><th>Tickets</th><th>Actions</th></thead>
                         <tbody>
                             <?php foreach ($departments as $dept): ?>
                             <tr>
-                                <td><?php echo $dept['id']; ?>
-                                <td><strong><?php echo htmlspecialchars($dept['name']); ?></strong>
-                                <td><?php echo htmlspecialchars($dept['head_of_department']); ?>
-                                <td><a href="mailto:<?php echo htmlspecialchars($dept['email']); ?>"><?php echo htmlspecialchars($dept['email']); ?></a>
+                                <td><?php echo $dept['id']; ?></td>
+                                <td><strong><?php echo htmlspecialchars($dept['name']); ?></strong></td>
+                                <td><?php echo htmlspecialchars($dept['head_of_department']); ?></td>
+                                <td><a href="mailto:<?php echo htmlspecialchars($dept['email']); ?>"><?php echo htmlspecialchars($dept['email']); ?></a></td>
                                 <td>
                                     <?php if($dept['ticket_count'] > 0): ?>
-                                        <span class="status-badge" style="background:#e3f2fd; color:#1565c0;"><?php echo $dept['ticket_count']; ?> tickets</span>
+                                        <span class="status-badge"><?php echo $dept['ticket_count']; ?> tickets</span>
                                     <?php else: ?>
                                         <span style="color:#94a3b8;">0 tickets</span>
                                     <?php endif; ?>
-                                
+                                </td>
                                 <td class="action-buttons">
-                                    <a href="?edit=<?php echo $dept['id']; ?>" class="btn-primary btn-sm" style="text-decoration:none; display:inline-block;">
-                                        <i class="fas fa-edit"></i> Edit
-                                    </a>
-                                    <a href="?delete=<?php echo $dept['id']; ?>" onclick="return confirm('Are you sure you want to delete this department? This action cannot be undone.')" class="btn-danger btn-sm" style="background:#c0392b; text-decoration:none; color:white; border-radius:5px; display:inline-block;">
-                                        <i class="fas fa-trash"></i> Delete
-                                    </a>
+                                    <a href="?edit=<?php echo $dept['id']; ?>" class="btn-primary btn-sm">Edit</a>
+                                    <a href="?delete=<?php echo $dept['id']; ?>" onclick="return confirm('Are you sure?')" class="btn-primary btn-sm" style="background:#c0392b;">Delete</a>
                                 </td>
                             </tr>
                             <?php endforeach; ?>
@@ -255,8 +270,8 @@ if (isset($_GET['edit'])) {
 <div id="deptModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3 id="deptModalTitle"><i class="fas fa-plus-circle"></i> Add Department</h3>
-            <span class="close-dept-modal">&times;</span>
+            <h3><i class="fas fa-plus-circle"></i> Add Department</h3>
+            <span class="close-dept-modal" style="cursor:pointer;">&times;</span>
         </div>
         <form id="deptForm" method="POST">
             <input type="hidden" name="action" value="add">
@@ -269,7 +284,7 @@ if (isset($_GET['edit'])) {
                 <input type="text" name="head" id="deptHead" placeholder="e.g., Dr. John Mkono" required>
             </div>
             <div class="form-group">
-                <label>Department Email </label>
+                <label>Department Email *</label>
                 <input type="email" name="email" id="deptEmail" placeholder="e.g., dept@iaa.ac.tz" required>
             </div>
             <div style="display:flex; gap:10px; justify-content:flex-end;">
@@ -286,7 +301,7 @@ if (isset($_GET['edit'])) {
     <div class="modal-content">
         <div class="modal-header">
             <h3><i class="fas fa-edit"></i> Edit Department</h3>
-            <a href="admin_departments.php" class="close-modal" style="text-decoration:none;">&times;</a>
+            <a href="admin_departments.php" style="text-decoration:none; font-size:1.5rem;">&times;</a>
         </div>
         <form method="POST">
             <input type="hidden" name="action" value="edit">
@@ -304,7 +319,7 @@ if (isset($_GET['edit'])) {
                 <input type="email" name="email" value="<?php echo htmlspecialchars($edit_dept['email']); ?>" required>
             </div>
             <div style="display:flex; gap:10px; justify-content:flex-end;">
-                <a href="admin_departments.php" class="btn-primary" style="background:#7f8c8d; text-decoration:none;">Cancel</a>
+                <a href="admin_departments.php" class="btn-primary" style="background:#7f8c8d;">Cancel</a>
                 <button type="submit" class="btn-primary">Update Department</button>
             </div>
         </form>
@@ -313,7 +328,6 @@ if (isset($_GET['edit'])) {
 <?php endif; ?>
 
 <script>
-    // Add Department Modal
     const addBtn = document.getElementById('addDeptBtn');
     const modal = document.getElementById('deptModal');
     const closeModal = document.querySelectorAll('.close-dept-modal, #cancelDeptModalBtn');
@@ -331,7 +345,6 @@ if (isset($_GET['edit'])) {
         });
     });
     
-    // Close add modal when clicking outside
     window.onclick = function(event) {
         if (event.target === modal) {
             modal.style.display = 'none';
