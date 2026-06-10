@@ -40,8 +40,12 @@ $photo_result = mysqli_query($conn, $photo_query);
 $student_data = mysqli_fetch_assoc($photo_result);
 $current_photo = $student_data['profile_photo'] ?? null;
 
-// Get opportunities
-$opp_query = "SELECT * FROM startup_opportunities WHERE status = 'active' ORDER BY created_at DESC";
+// ========== FIXED: Get opportunities that are NOT expired ==========
+// Only show opportunities where deadline is today or in the future
+$opp_query = "SELECT * FROM startup_opportunities 
+              WHERE status = 'active' 
+              AND deadline >= CURDATE()
+              ORDER BY deadline ASC, created_at DESC";
 $opp_result = mysqli_query($conn, $opp_query);
 
 // Get ideas
@@ -97,7 +101,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
             color: white;
         }
         
-        /* FIXED: Prevent movement when switching tabs */
+        /* Prevent movement when switching tabs */
         .tab-content { 
             display: none; 
             min-height: 550px;
@@ -106,7 +110,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
             display: block; 
         }
         
-        /* FIXED: Keep main content area stable */
         .main-content { 
             flex: 1; 
             padding: 20px 25px; 
@@ -155,7 +158,23 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
         }
         .card-type.job { background: #d9f0e5; color: #1d6f42; }
         .card-type.training { background: #fff3e0; color: #b45f06; }
-        .apply-btn { background: #2c7da0; color: white; border: none; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; }
+        
+        /* FIXED: Apply button styled as link */
+        .apply-btn { 
+            background: #2c7da0; 
+            color: white; 
+            border: none; 
+            padding: 5px 12px; 
+            border-radius: 20px; 
+            cursor: pointer; 
+            font-size: 0.7rem; 
+            text-decoration: none;
+            display: inline-block;
+        }
+        .apply-btn:hover {
+            background: #1f5068;
+        }
+        
         .idea-form { background: white; border-radius: 20px; padding: 25px; margin-bottom: 25px; border: 1px solid #e2edf2; }
         .submit-btn { background: #f39c12; color: white; border: none; padding: 10px 20px; border-radius: 30px; cursor: pointer; font-weight: 600; }
         .message { padding: 10px 14px; border-radius: 12px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
@@ -164,11 +183,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
         .message-error { background: #fde8e8; color: #c0392b; }
         .status-badge { background: #fff3e0; padding: 2px 8px; border-radius: 20px; display: inline-block; font-size: 0.75rem; }
         
+        /* Deadline urgency colors */
+        .deadline-urgent { color: #c0392b; font-weight: bold; }
+        .deadline-warning { color: #e67e22; }
+        .deadline-normal { color: #27ae60; }
+        
         .form-group { margin-bottom: 15px; }
         .form-group label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.85rem; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border-radius: 12px; border: 1px solid #cbd5e1; }
         
-        /* Scrollbar styling */
         ::-webkit-scrollbar { width: 6px; }
         ::-webkit-scrollbar-track { background: #e2edf2; border-radius: 10px; }
         ::-webkit-scrollbar-thumb { background: #2c7da0; border-radius: 10px; }
@@ -226,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
             <button class="tab-btn" data-tab="advisory"><i class="fas fa-chalkboard-user"></i> Ushauri & Innovation</button>
         </div>
 
-        <!-- Tab 1: Opportunities -->
+        <!-- Tab 1: Opportunities (UPDATED - shows days left and working Apply button) -->
         <div id="opportunitiesTab" class="tab-content active">
             <div style="margin-bottom: 20px;">
                 <select id="filterCategory" style="padding:8px; border-radius:20px; border:1px solid #cbdbe6;">
@@ -240,20 +263,50 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
                 <?php if(mysqli_num_rows($opp_result) == 0): ?>
                     <div style="text-align:center; padding:40px;">⚠️ Hakuna fursa kwa sasa. Check back later!</div>
                 <?php else: ?>
-                    <?php while($opp = mysqli_fetch_assoc($opp_result)): ?>
+                    <?php while($opp = mysqli_fetch_assoc($opp_result)): 
+                        $deadline_date = $opp['deadline'];
+                        $days_left = ceil((strtotime($deadline_date) - time()) / (60 * 60 * 24));
+                        
+                        // Determine deadline color based on days left
+                        if ($days_left <= 3) {
+                            $deadline_class = 'deadline-urgent';
+                            $deadline_icon = 'fa-exclamation-triangle';
+                        } elseif ($days_left <= 7) {
+                            $deadline_class = 'deadline-warning';
+                            $deadline_icon = 'fa-clock';
+                        } else {
+                            $deadline_class = 'deadline-normal';
+                            $deadline_icon = 'fa-calendar-check';
+                        }
+                        
+                        // Get application link (default to # if not set)
+                        $apply_link = !empty($opp['application_link']) ? $opp['application_link'] : '#';
+                    ?>
                         <div class="opportunity-card">
-                            <div class="card-header" style="display:flex; justify-content:space-between; margin-bottom:10px;">
+                            <div style="display:flex; justify-content:space-between; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
                                 <span class="card-type <?php echo $opp['type']; ?>">
                                     <i class="fas <?php echo $opp['type'] == 'job' ? 'fa-briefcase' : ($opp['type'] == 'training' ? 'fa-graduation-cap' : 'fa-star'); ?>"></i> 
                                     <?php echo ucfirst($opp['type']); ?>
                                 </span>
-                                <span style="font-size:0.7rem;"><i class="fas fa-calendar"></i> Deadline: <?php echo date('d/m/Y', strtotime($opp['deadline'])); ?></span>
+                                <span style="font-size:0.7rem;" class="<?php echo $deadline_class; ?>">
+                                    <i class="fas <?php echo $deadline_icon; ?>"></i> 
+                                    Deadline: <?php echo date('d/m/Y', strtotime($deadline_date)); ?>
+                                    (<?php echo $days_left; ?> days left)
+                                </span>
                             </div>
-                            <div class="card-title" style="font-weight:700; margin-bottom:8px;"><?php echo htmlspecialchars($opp['title']); ?></div>
-                            <div class="card-desc" style="font-size:0.8rem; color:#7f8c8d; margin-bottom:12px;"><?php echo htmlspecialchars($opp['description']); ?></div>
-                            <div class="card-footer" style="display:flex; justify-content:space-between;">
+                            <div style="font-weight:700; margin-bottom:8px;"><?php echo htmlspecialchars($opp['title']); ?></div>
+                            <div style="font-size:0.8rem; color:#7f8c8d; margin-bottom:12px;"><?php echo htmlspecialchars($opp['description']); ?></div>
+                            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
                                 <span><i class="fas fa-envelope"></i> <?php echo htmlspecialchars($opp['contact_info']); ?></span>
-                                <button class="apply-btn" onclick="alert('Application submitted! You will be contacted via email.')"><i class="fas fa-paper-plane"></i> Apply / Register</button>
+                                <?php if($apply_link != '#'): ?>
+                                    <a href="<?php echo htmlspecialchars($apply_link); ?>" target="_blank" class="apply-btn">
+                                        <i class="fas fa-external-link-alt"></i> Apply / Register
+                                    </a>
+                                <?php else: ?>
+                                    <button class="apply-btn" onclick="alert('Application link not available yet. Please check back later.')">
+                                        <i class="fas fa-paper-plane"></i> Apply / Register
+                                    </button>
+                                <?php endif; ?>
                             </div>
                         </div>
                     <?php endwhile; ?>
@@ -261,7 +314,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
             </div>
         </div>
 
-        <!-- Tab 2: Submit Business Ideas -->
+        <!-- Tab 2: Submit Business Ideas (unchanged) -->
         <div id="ideasTab" class="tab-content">
             <div class="idea-form">
                 <h3 style="margin-bottom:15px;"><i class="fas fa-lightbulb"></i> Wasilisha Wazo Lako la Biashara</h3>
@@ -288,13 +341,13 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
                 <?php else: ?>
                     <?php while($idea = mysqli_fetch_assoc($ideas_result)): ?>
                         <div class="idea-card">
-                            <div class="card-header" style="display:flex; justify-content:space-between;">
+                            <div style="display:flex; justify-content:space-between;">
                                 <span class="card-type"><i class="fas fa-lightbulb"></i> <?php echo htmlspecialchars($idea['category']); ?></span>
                                 <span style="font-size:0.7rem;"><?php echo date('d/m/Y', strtotime($idea['created_at'])); ?></span>
                             </div>
-                            <div class="card-title" style="font-weight:700; margin:10px 0;"><?php echo htmlspecialchars($idea['title']); ?></div>
-                            <div class="card-desc" style="font-size:0.8rem; color:#7f8c8d;"><?php echo htmlspecialchars($idea['description']); ?></div>
-                            <div class="card-footer" style="margin-top:10px;">
+                            <div style="font-weight:700; margin:10px 0;"><?php echo htmlspecialchars($idea['title']); ?></div>
+                            <div style="font-size:0.8rem; color:#7f8c8d;"><?php echo htmlspecialchars($idea['description']); ?></div>
+                            <div style="margin-top:10px;">
                                 <span><i class="fas fa-tools"></i> Anahitaji: <?php echo htmlspecialchars($idea['resources_needed']); ?></span>
                                 <span class="status-badge"><?php echo ucfirst($idea['status']); ?></span>
                             </div>
@@ -304,15 +357,15 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
             </div>
         </div>
 
-        <!-- Tab 3: Advisory & Innovation -->
+        <!-- Tab 3: Advisory & Innovation (unchanged) -->
         <div id="advisoryTab" class="tab-content">
-            <div class="advisory-section" style="background:linear-gradient(135deg, #0d2232, #0a1c2a); border-radius:20px; padding:25px; color:white;">
+            <div style="background:linear-gradient(135deg, #0d2232, #0a1c2a); border-radius:20px; padding:25px; color:white;">
                 <h3><i class="fas fa-chalkboard-user"></i> Startup Office - Innovation Hub</h3>
                 <p style="margin-top:10px;">Tunakusaidia kuboresha mawazo yako, kuunganisha na wataalam, na kupata fursa za ufadhili.</p>
-                <div class="advisor-card" style="display:flex; align-items:center; gap:15px; background:rgba(255,255,255,0.1); padding:15px; border-radius:15px; margin-top:15px;">
-                    <div class="advisor-icon" style="width:50px; height:50px; background:#2c7da0; border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="fas fa-user-tie"></i></div>
+                <div style="display:flex; align-items:center; gap:15px; background:rgba(255,255,255,0.1); padding:15px; border-radius:15px; margin-top:15px; flex-wrap:wrap;">
+                    <div style="width:50px; height:50px; background:#2c7da0; border-radius:50%; display:flex; align-items:center; justify-content:center;"><i class="fas fa-user-tie"></i></div>
                     <div><h4>Dr. Sarah Mushi</h4><p>Head of Innovation & Startup Office</p><p><i class="fas fa-envelope"></i> sarah.mushi@iaa.ac.tz</p></div>
-                    <button class="contact-advisor" onclick="alert('Email sent to Startup Office')" style="background:#2c7da0; border:none; padding:5px 12px; border-radius:20px; color:white;">Wasiliana</button>
+                    <button onclick="alert('Email sent to Startup Office')" style="background:#2c7da0; border:none; padding:5px 12px; border-radius:20px; color:white;">Wasiliana</button>
                 </div>
             </div>
             <div style="background:white; border-radius:20px; padding:20px; margin-top:20px;">
@@ -335,29 +388,22 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
     }
     setCurrentDate();
 
-    // Tab switching - FIXED: No movement
+    // Tab switching - No movement
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            // Don't do anything if already active
             if (this.classList.contains('active')) return;
             
-            // Remove active class from all buttons
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
             
-            // Get tab to show
             const tab = this.dataset.tab;
-            
-            // Get current scroll position before changing content
             const mainContent = document.querySelector('.main-content');
             const scrollPosition = mainContent.scrollTop;
             
-            // Hide all tab contents
             document.querySelectorAll('.tab-content').forEach(content => {
                 content.classList.remove('active');
             });
             
-            // Show selected tab content
             if (tab === 'opportunities') {
                 document.getElementById('opportunitiesTab').classList.add('active');
             }
@@ -368,7 +414,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
                 document.getElementById('advisoryTab').classList.add('active');
             }
             
-            // FIXED: Restore scroll position to prevent jumping
             setTimeout(() => {
                 mainContent.scrollTop = scrollPosition;
             }, 10);

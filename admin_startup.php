@@ -15,7 +15,7 @@ if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
 
 require_once 'config/database.php';
 
-// ========== FIXED: Admin ID handling (BADILISHA HIVI) ==========
+// ========== FIXED: Admin ID handling ==========
 $logged_user_id = $_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? null;
 
 if (!$logged_user_id) {
@@ -34,10 +34,9 @@ if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
     if ($photo_result && mysqli_num_rows($photo_result) > 0) {
         $admin_data = mysqli_fetch_assoc($photo_result);
         $current_photo = $admin_data['profile_photo'] ?? null;
-        $_SESSION['profile_photo'] = $current_photo; // Store in session
+        $_SESSION['profile_photo'] = $current_photo;
     }
 }
-// au ziachwe lakini hazitasababisha error
 
 // Handle idea status update (approve/reject)
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
@@ -55,7 +54,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         exit();
     }
     
-    // Handle add opportunity
+    // Handle add opportunity (FIXED - added application_link)
     if ($_POST['action'] === 'add_opportunity') {
         $title = mysqli_real_escape_string($conn, $_POST['title']);
         $type = mysqli_real_escape_string($conn, $_POST['type']);
@@ -63,10 +62,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $description = mysqli_real_escape_string($conn, $_POST['description']);
         $contact = mysqli_real_escape_string($conn, $_POST['contact']);
         $deadline = mysqli_real_escape_string($conn, $_POST['deadline']);
-        $created_by = $logged_user_id;  // FIXED: Use $logged_user_id
+        $application_link = mysqli_real_escape_string($conn, $_POST['application_link']);
+        $created_by = $logged_user_id;
         
-        $insert = "INSERT INTO startup_opportunities (title, type, category, description, deadline, contact_info, created_by) 
-                   VALUES ('$title', '$type', '$category', '$description', '$deadline', '$contact', '$created_by')";
+        $insert = "INSERT INTO startup_opportunities (title, type, category, description, deadline, contact_info, application_link, created_by) 
+                   VALUES ('$title', '$type', '$category', '$description', '$deadline', '$contact', '$application_link', '$created_by')";
         if (mysqli_query($conn, $insert)) {
             echo 'success';
         } else {
@@ -111,7 +111,6 @@ $approved_ideas = count(array_filter($ideas, function($i) { return $i['status'] 
 $total_opportunities = count($opportunities);
 ?>
 
-<!-- HTML yako inabaki SAWA kabisa kuanzia hapa -->
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -217,7 +216,7 @@ $total_opportunities = count($opportunities);
             <button class="tab-btn" data-tab="statistics"><i class="fas fa-chart-line"></i> Statistics</button>
         </div>
 
-        <!-- TAB 1: Student Ideas -->
+        <!-- TAB 1: Student Ideas (same as before) -->
         <div id="ideasTab" class="tab-content">
             <div class="form-container">
                 <h3><i class="fas fa-filter"></i> Filter Ideas</h3>
@@ -248,19 +247,25 @@ $total_opportunities = count($opportunities);
             </div>
         </div>
 
-        <!-- TAB 2: Opportunities -->
+        <!-- TAB 2: Opportunities (UPDATED - added Application Link field) -->
         <div id="opportunitiesTab" class="tab-content" style="display:none;">
             <div class="form-container">
                 <h3><i class="fas fa-plus-circle"></i> Add New Opportunity</h3>
                 <div class="form-row">
-                    <div class="form-group"><label>Title</label><input type="text" id="oppTitle" placeholder="e.g., Digital Marketing Training"></div>
-                    <div class="form-group"><label>Type</label><select id="oppType"><option value="job">Job / Short Term</option><option value="training">Training</option><option value="internship">Internship</option></select></div>
+                    <div class="form-group"><label>Title *</label><input type="text" id="oppTitle" placeholder="e.g., Digital Marketing Training" required></div>
+                    <div class="form-group"><label>Type *</label><select id="oppType" required><option value="job">Job / Short Term</option><option value="training">Training</option><option value="internship">Internship</option></select></div>
                     <div class="form-group"><label>Category</label><select id="oppCategory"><option value="job">Job</option><option value="training">Training</option><option value="internship">Internship</option></select></div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group"><label>Description</label><textarea id="oppDesc" rows="2" placeholder="Describe the opportunity..."></textarea></div>
+                    <div class="form-group"><label>Description *</label><textarea id="oppDesc" rows="2" placeholder="Describe the opportunity..." required></textarea></div>
                     <div class="form-group"><label>Contact Info</label><input type="text" id="oppContact" placeholder="Email or phone"></div>
-                    <div class="form-group"><label>Deadline</label><input type="date" id="oppDeadline"></div>
+                    <div class="form-group"><label>Deadline *</label><input type="date" id="oppDeadline" required></div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group"><label>Application Link (URL) *</label>
+                        <input type="url" id="oppAppLink" placeholder="https://example.com/apply" required>
+                        <small style="color:#7f8c8d;">Weka link ambapo wanafunzi watatuma maombi</small>
+                    </div>
                 </div>
                 <button class="btn-primary" id="addOpportunityBtn"><i class="fas fa-save"></i> Add Opportunity</button>
             </div>
@@ -272,7 +277,10 @@ $total_opportunities = count($opportunities);
                         <strong><?php echo htmlspecialchars($opp['title']); ?></strong>
                         <span class="status-badge-approved"><?php echo ucfirst($opp['type']); ?></span>
                     </div>
-                    <div><small><i class="fas fa-calendar"></i> Deadline: <?php echo $opp['deadline']; ?> | <i class="fas fa-envelope"></i> <?php echo htmlspecialchars($opp['contact_info']); ?></small></div>
+                    <div><small><i class="fas fa-calendar"></i> Deadline: <?php echo date('d/m/Y', strtotime($opp['deadline'])); ?> | <i class="fas fa-envelope"></i> <?php echo htmlspecialchars($opp['contact_info']); ?></small></div>
+                    <?php if(!empty($opp['application_link'])): ?>
+                    <div><small><i class="fas fa-link"></i> Link: <a href="<?php echo htmlspecialchars($opp['application_link']); ?>" target="_blank"><?php echo htmlspecialchars($opp['application_link']); ?></a></small></div>
+                    <?php endif; ?>
                     <p><?php echo htmlspecialchars(substr($opp['description'], 0, 100)); ?></p>
                     <button class="btn-danger btn-sm delete-opp" data-id="<?php echo $opp['id']; ?>"><i class="fas fa-trash"></i> Delete</button>
                 </div>
@@ -283,7 +291,7 @@ $total_opportunities = count($opportunities);
             </div>
         </div>
 
-        <!-- TAB 3: Statistics -->
+        <!-- TAB 3: Statistics (same as before) -->
         <div id="statisticsTab" class="tab-content" style="display:none;">
             <div class="widget-card"><canvas id="ideasChart" width="400" height="200" style="max-height:250px;"></canvas></div>
             <div class="widget-card"><canvas id="opportunitiesChart" width="400" height="200" style="max-height:250px;"></canvas></div>
@@ -291,7 +299,7 @@ $total_opportunities = count($opportunities);
     </main>
 </div>
 
-<!-- Modal for Viewing Idea -->
+<!-- Modal for Viewing Idea (same as before) -->
 <div id="ideaModal" class="modal">
     <div class="modal-content">
         <div class="modal-header"><h3>Idea Details</h3><span class="close-modal">&times;</span></div>
@@ -418,7 +426,7 @@ $total_opportunities = count($opportunities);
     document.getElementById('rejectIdeaBtn')?.addEventListener('click', () => updateIdeaStatus('rejected'));
     document.querySelectorAll('.close-modal').forEach(el => el.addEventListener('click', () => document.getElementById('ideaModal').style.display = 'none'));
 
-    // Add opportunity
+    // Add opportunity (UPDATED - includes application_link)
     document.getElementById('addOpportunityBtn')?.addEventListener('click', () => {
         const title = document.getElementById('oppTitle').value;
         const type = document.getElementById('oppType').value;
@@ -426,12 +434,17 @@ $total_opportunities = count($opportunities);
         const description = document.getElementById('oppDesc').value;
         const contact = document.getElementById('oppContact').value;
         const deadline = document.getElementById('oppDeadline').value;
-        if (!title || !description) { alert('Please fill title and description'); return; }
+        const application_link = document.getElementById('oppAppLink').value;
+        
+        if (!title || !description || !deadline || !application_link) { 
+            alert('Please fill all required fields (Title, Description, Deadline, and Application Link)'); 
+            return; 
+        }
         
         fetch(window.location.href, {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: `action=add_opportunity&title=${encodeURIComponent(title)}&type=${type}&category=${category}&description=${encodeURIComponent(description)}&contact=${encodeURIComponent(contact)}&deadline=${deadline}`
+            body: `action=add_opportunity&title=${encodeURIComponent(title)}&type=${type}&category=${category}&description=${encodeURIComponent(description)}&contact=${encodeURIComponent(contact)}&deadline=${deadline}&application_link=${encodeURIComponent(application_link)}`
         })
         .then(response => response.text())
         .then(data => {
@@ -439,7 +452,7 @@ $total_opportunities = count($opportunities);
                 alert('Opportunity added successfully!');
                 window.location.reload();
             } else {
-                alert('Error adding opportunity');
+                alert('Error adding opportunity: ' + data);
             }
         });
     });
