@@ -16,7 +16,6 @@ if ($_SESSION['role'] !== 'student') {
 require_once 'config/database.php';
 
 // ========== ENSURE student_id IS IN SESSION ==========
-// If student_id is not in session, find it using reg_no
 if (!isset($_SESSION['student_id'])) {
     $reg_no = $_SESSION['reg_no'];
     $find_id_query = "SELECT id FROM students WHERE reg_no = '$reg_no'";
@@ -25,7 +24,6 @@ if (!isset($_SESSION['student_id'])) {
         $student_id_data = mysqli_fetch_assoc($find_id_result);
         $_SESSION['student_id'] = $student_id_data['id'];
     } else {
-        // If student not found, logout
         session_destroy();
         header("Location: ../login.php");
         exit();
@@ -36,18 +34,17 @@ $student_id = $_SESSION['student_id'];
 $fullname = $_SESSION['fullname'];
 $reg_no = $_SESSION['reg_no'];
 
-// ========== GET PROFILE PHOTO USING student_id ==========
+// ========== GET PROFILE PHOTO ==========
 $photo_query = "SELECT profile_photo FROM students WHERE id = $student_id";
 $photo_result = mysqli_query($conn, $photo_query);
 $student_data = mysqli_fetch_assoc($photo_result);
 $current_photo = $student_data['profile_photo'] ?? null;
-// ========================================================
 
-// Get opportunities from database
+// Get opportunities
 $opp_query = "SELECT * FROM startup_opportunities WHERE status = 'active' ORDER BY created_at DESC";
 $opp_result = mysqli_query($conn, $opp_query);
 
-// Get ideas from database
+// Get ideas
 $ideas_query = "SELECT * FROM startup_ideas WHERE user_id = '$student_id' ORDER BY created_at DESC";
 $ideas_result = mysqli_query($conn, $ideas_query);
 
@@ -62,7 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
                      VALUES ('$student_id', '$title', '$category', '$description', '$resources', 'pending')";
     if (mysqli_query($conn, $insert_query)) {
         $success_message = "Your idea has been submitted successfully!";
-        // Refresh ideas
         $ideas_result = mysqli_query($conn, $ideas_query);
     } else {
         $error_message = "Error submitting idea.";
@@ -100,13 +96,63 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
             font-size: 35px;
             color: white;
         }
-        .tab-content { display: none; }
-        .tab-content.active { display: block; }
-        .startup-tabs { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid #e2edf2; padding-bottom: 10px; flex-wrap: wrap; }
-        .tab-btn { background: none; border: none; padding: 8px 20px; cursor: pointer; font-weight: 500; color: #7f8c8d; transition: 0.2s; border-radius: 20px; }
-        .tab-btn.active { background: #f39c12; color: white; }
-        .opportunity-card, .idea-card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 15px; border: 1px solid #e2edf2; }
-        .card-type { background: #e0f0f5; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; font-weight: 600; display: inline-block; }
+        
+        /* FIXED: Prevent movement when switching tabs */
+        .tab-content { 
+            display: none; 
+            min-height: 550px;
+        }
+        .tab-content.active { 
+            display: block; 
+        }
+        
+        /* FIXED: Keep main content area stable */
+        .main-content { 
+            flex: 1; 
+            padding: 20px 25px; 
+            background: #f8fafc; 
+            overflow-y: auto;
+            min-height: 100vh;
+        }
+        
+        .startup-tabs { 
+            display: flex; 
+            gap: 10px; 
+            margin-bottom: 20px; 
+            border-bottom: 1px solid #e2edf2; 
+            padding-bottom: 10px; 
+            flex-wrap: wrap; 
+        }
+        .tab-btn { 
+            background: none; 
+            border: none; 
+            padding: 8px 20px; 
+            cursor: pointer; 
+            font-weight: 500; 
+            color: #7f8c8d; 
+            transition: 0.2s; 
+            border-radius: 20px; 
+        }
+        .tab-btn.active { 
+            background: #f39c12; 
+            color: white; 
+        }
+        
+        .opportunity-card, .idea-card { 
+            background: white; 
+            border-radius: 16px; 
+            padding: 18px; 
+            margin-bottom: 15px; 
+            border: 1px solid #e2edf2; 
+        }
+        .card-type { 
+            background: #e0f0f5; 
+            padding: 4px 12px; 
+            border-radius: 20px; 
+            font-size: 0.7rem; 
+            font-weight: 600; 
+            display: inline-block; 
+        }
         .card-type.job { background: #d9f0e5; color: #1d6f42; }
         .card-type.training { background: #fff3e0; color: #b45f06; }
         .apply-btn { background: #2c7da0; color: white; border: none; padding: 5px 12px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; }
@@ -117,6 +163,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
         .message-success { background: #d9f0e5; color: #1d6f42; }
         .message-error { background: #fde8e8; color: #c0392b; }
         .status-badge { background: #fff3e0; padding: 2px 8px; border-radius: 20px; display: inline-block; font-size: 0.75rem; }
+        
+        .form-group { margin-bottom: 15px; }
+        .form-group label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.85rem; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 10px; border-radius: 12px; border: 1px solid #cbd5e1; }
+        
+        /* Scrollbar styling */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #e2edf2; border-radius: 10px; }
+        ::-webkit-scrollbar-thumb { background: #2c7da0; border-radius: 10px; }
+        
+        @media (max-width: 768px) {
+            .tab-content { min-height: 650px; }
+        }
     </style>
 </head>
 <body>
@@ -276,16 +335,43 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_idea'])) {
     }
     setCurrentDate();
 
-    // Tab switching
+    // Tab switching - FIXED: No movement
     document.querySelectorAll('.tab-btn').forEach(btn => {
         btn.addEventListener('click', function() {
+            // Don't do anything if already active
+            if (this.classList.contains('active')) return;
+            
+            // Remove active class from all buttons
             document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
             this.classList.add('active');
+            
+            // Get tab to show
             const tab = this.dataset.tab;
-            document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
-            if (tab === 'opportunities') document.getElementById('opportunitiesTab').classList.add('active');
-            if (tab === 'ideas') document.getElementById('ideasTab').classList.add('active');
-            if (tab === 'advisory') document.getElementById('advisoryTab').classList.add('active');
+            
+            // Get current scroll position before changing content
+            const mainContent = document.querySelector('.main-content');
+            const scrollPosition = mainContent.scrollTop;
+            
+            // Hide all tab contents
+            document.querySelectorAll('.tab-content').forEach(content => {
+                content.classList.remove('active');
+            });
+            
+            // Show selected tab content
+            if (tab === 'opportunities') {
+                document.getElementById('opportunitiesTab').classList.add('active');
+            }
+            if (tab === 'ideas') {
+                document.getElementById('ideasTab').classList.add('active');
+            }
+            if (tab === 'advisory') {
+                document.getElementById('advisoryTab').classList.add('active');
+            }
+            
+            // FIXED: Restore scroll position to prevent jumping
+            setTimeout(() => {
+                mainContent.scrollTop = scrollPosition;
+            }, 10);
         });
     });
 

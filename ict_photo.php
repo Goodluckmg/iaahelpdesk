@@ -3,29 +3,29 @@ session_start();
 
 // 1. Angalia kama ameingia
 if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
 
-// 2. Angalia kama ana role ya admin (super_admin au admin)
-if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
-    header("Location: student/student_index.php");
+// 2. Angalia kama ana role ya ICT
+if ($_SESSION['role'] !== 'ict') {
+    header("Location: ../" . $_SESSION['role'] . "_dashboard.php");
     exit();
 }
 
 require_once 'config/database.php';
 
-// ========== FIXED: Admin ID handling ==========
-$admin_id = $_SESSION['user_id'] ?? $_SESSION['admin_id'] ?? null;
+// ========== ICT STAFF ID handling ==========
+$staff_id = $_SESSION['staff_id'] ?? $_SESSION['user_id'] ?? null;
 
-if (!$admin_id) {
+if (!$staff_id) {
     session_destroy();
-    header("Location: login.php");
+    header("Location: ../login.php");
     exit();
 }
 
-$admin_reg_no = $_SESSION['reg_no'] ?? '';
-$admin_name = $_SESSION['fullname'] ?? 'Admin';
+$staff_reg_no = $_SESSION['staff_no'] ?? '';
+$staff_name = $_SESSION['fullname'] ?? 'ICT Staff';
 
 // Handle photo upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
@@ -36,39 +36,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
         if (in_array($file['type'], $allowed_types) && $file['size'] <= 2 * 1024 * 1024) { // 2MB max
             // Convert image to base64 for storage
             $image_data = base64_encode(file_get_contents($file['tmp_name']));
-            $update_query = "UPDATE students SET profile_photo = '$image_data' WHERE id = $admin_id";
             
-            if (mysqli_query($conn, $update_query)) {
-                // Update session with new photo
-                $_SESSION['profile_photo'] = $image_data;
-                $_SESSION['success'] = "Profile photo updated successfully!";
-            } else {
-                $_SESSION['error'] = "Database error: " . mysqli_error($conn);
+            // Check if staff is in students table or staff table
+            $update_query = "UPDATE students SET profile_photo = '$image_data' WHERE id = $staff_id";
+            if (!mysqli_query($conn, $update_query)) {
+                // Try staff table
+                $update_query = "UPDATE staff SET profile_photo = '$image_data' WHERE id = $staff_id";
+                mysqli_query($conn, $update_query);
             }
+            
+            // Update session with new photo
+            $_SESSION['profile_photo'] = $image_data;
+            $_SESSION['success'] = "Profile photo updated successfully!";
         } else {
             $_SESSION['error'] = "Invalid file! Use JPEG, PNG, JPG (max 2MB).";
         }
     } else {
         $_SESSION['error'] = "Please select a file to upload.";
     }
-    header("Location: admin_edit.php");
+    header("Location: ict_photo.php");
     exit();
 }
 
-// Get current profile photo from database (priority: session first, then database)
+// Get current profile photo (priority: session first, then database)
 if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
     $current_photo = $_SESSION['profile_photo'];
 } else {
-    $photo_query = "SELECT profile_photo FROM students WHERE id = $admin_id";
+    // Try students table first
+    $photo_query = "SELECT profile_photo FROM students WHERE id = $staff_id";
     $photo_result = mysqli_query($conn, $photo_query);
+    
     if ($photo_result && mysqli_num_rows($photo_result) > 0) {
-        $admin_data = mysqli_fetch_assoc($photo_result);
-        $current_photo = $admin_data['profile_photo'] ?? null;
-        // Store in session for next time
-        $_SESSION['profile_photo'] = $current_photo;
+        $staff_data = mysqli_fetch_assoc($photo_result);
+        $current_photo = $staff_data['profile_photo'] ?? null;
     } else {
-        $current_photo = null;
+        // Try staff table
+        $photo_query = "SELECT profile_photo FROM staff WHERE id = $staff_id";
+        $photo_result = mysqli_query($conn, $photo_query);
+        if ($photo_result && mysqli_num_rows($photo_result) > 0) {
+            $staff_data = mysqli_fetch_assoc($photo_result);
+            $current_photo = $staff_data['profile_photo'] ?? null;
+        } else {
+            $current_photo = null;
+        }
     }
+    // Store in session for next time
+    $_SESSION['profile_photo'] = $current_photo;
 }
 ?>
 
@@ -77,14 +90,14 @@ if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IAA Helpdesk | Admin - Edit Profile Photo</title>
+    <title>IAA Helpdesk | ICT - Edit Profile Photo</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .app-container { display: flex; height: 100vh; }
         .sidebar { width: 280px; background: #0a1c2a; color: #e0edf5; display: flex; flex-direction: column; overflow-y: auto; }
         .profile-area { padding: 25px 20px; text-align: center; border-bottom: 1px solid #1a3a4f; }
-        .avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #e74c3c, #c0392b); }
+        .avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #2c7da0, #1f5068); }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .avatar i { font-size: 40px; color: white; }
         .welcome-text { font-size: 0.85rem; color: #94a3b8; }
@@ -106,18 +119,18 @@ if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
         .user-fullname { font-size: 1.4rem; font-weight: 700; color: #0a2b38; margin-bottom: 5px; }
         .user-reg-number { font-size: 0.8rem; color: #7f8c8d; background: #f1f5f9; display: inline-block; padding: 5px 15px; border-radius: 30px; }
         .photo-preview-card { text-align: center; margin-bottom: 25px; padding: 20px; background: white; border-radius: 20px; border: 1px solid #e2edf2; }
-        .photo-circle-preview { width: 150px; height: 150px; margin: 0 auto; border-radius: 50%; overflow: hidden; border: 4px solid #e74c3c; box-shadow: 0 5px 15px rgba(0,0,0,0.1); background: #f1f5f9; display: flex; align-items: center; justify-content: center; }
+        .photo-circle-preview { width: 150px; height: 150px; margin: 0 auto; border-radius: 50%; overflow: hidden; border: 4px solid #2c7da0; box-shadow: 0 5px 15px rgba(0,0,0,0.1); background: #f1f5f9; display: flex; align-items: center; justify-content: center; }
         .photo-circle-preview img { width: 100%; height: 100%; object-fit: cover; }
         .photo-circle-preview i { font-size: 60px; color: #cbd5e1; }
         .upload-card { background: #f8fafc; border-radius: 20px; padding: 25px; margin-bottom: 25px; border: 1px dashed #cbd5e1; text-align: center; }
-        .upload-icon { font-size: 48px; color: #e74c3c; margin-bottom: 15px; }
+        .upload-icon { font-size: 48px; color: #2c7da0; margin-bottom: 15px; }
         .upload-requirements { font-size: 0.75rem; color: #7f8c8d; margin-bottom: 20px; }
         .file-input-area { margin-bottom: 10px; }
-        .custom-file-label { background: #e74c3c; color: white; padding: 10px 24px; border-radius: 30px; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease; }
-        .custom-file-label:hover { background: #c0392b; transform: translateY(-2px); }
-        .selected-file-name { font-size: 0.75rem; color: #e74c3c; margin-top: 10px; }
-        .save-photo-btn { width: 100%; background: linear-gradient(135deg, #e74c3c, #c0392b); border: none; padding: 14px; border-radius: 40px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .save-photo-btn:hover { background: linear-gradient(135deg, #c0392b, #a93226); transform: translateY(-2px); }
+        .custom-file-label { background: #2c7da0; color: white; padding: 10px 24px; border-radius: 30px; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease; }
+        .custom-file-label:hover { background: #1f5068; transform: translateY(-2px); }
+        .selected-file-name { font-size: 0.75rem; color: #2c7da0; margin-top: 10px; }
+        .save-photo-btn { width: 100%; background: linear-gradient(135deg, #2c7da0, #1f5068); border: none; padding: 14px; border-radius: 40px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .save-photo-btn:hover { background: linear-gradient(135deg, #1f5068, #0f3a4f); transform: translateY(-2px); }
         .message { padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
         .message-success { background: #d9f0e5; color: #1d6f42; border-left: 4px solid #1d6f42; }
         .message-error { background: #fde8e8; color: #c0392b; border-left: 4px solid #c0392b; }
@@ -141,24 +154,22 @@ if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
                 <?php if ($display_photo): ?>
                     <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($display_photo); ?>" alt="Profile Photo">
                 <?php else: ?>
-                    <i class="fas fa-user-shield"></i>
+                    <i class="fas fa-laptop-code"></i>
                 <?php endif; ?>
             </div>
             <div class="welcome-text">Welcome,</div>
-            <div class="user-name"><?php echo htmlspecialchars($admin_name); ?></div>
-            <div class="user-role"><?php echo ($_SESSION['role'] == 'super_admin') ? '👑 Super Admin' : '⚙️ Admin'; ?></div>
-            <div class="user-id"><?php echo htmlspecialchars($admin_reg_no); ?></div>
+            <div class="user-name"><?php echo htmlspecialchars($staff_name); ?></div>
+            <div class="user-role">💻 ICT Support</div>
+            <div class="user-id"><?php echo htmlspecialchars($staff_reg_no); ?></div>
         </div>
         <div class="nav-menu">
-            <a href="admin_dashboard.php" class="nav-item"><i class="fas fa-chart-pie"></i><span>Dashboard</span></a>
-            <a href="admin_users_management.php" class="nav-item"><i class="fas fa-users"></i><span>User Management</span></a>
-            <a href="admin_tickets_view.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span>All Tickets</span></a>
-            <a href="admin_departments.php" class="nav-item"><i class="fas fa-building"></i><span>Departments</span></a>
-            <a href="admin_edit.php" class="nav-item active"><i class="fas fa-camera"></i><span>Edit Photo</span></a>
-            <a href="admin_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span>Startup Hub</span></a>
-            <a href="admin_analytics.php" class="nav-item"><i class="fas fa-chart-line"></i><span>Analytics</span></a>
-            <a href="admin_settings.php" class="nav-item"><i class="fas fa-cog"></i><span>System Settings</span></a>
-            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></div>
+            <a href="ict.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
+            <a href="ict_tickets.php" class="nav-item"><i class="fas fa-ticket-alt"></i><span class="nav-label">Support Tickets</span></a>
+            <a href="ict_systems.php" class="nav-item"><i class="fas fa-server"></i><span class="nav-label">System Status</span></a>
+            <a href="ict_maintenance.php" class="nav-item"><i class="fas fa-bullhorn"></i><span>Announcements</span></a>
+            <a href="ict_photo.php" class="nav-item active"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
+            <a href="ict_reports.php" class="nav-item"><i class="fas fa-chart-line"></i><span class="nav-label">Reports</span></a>
+            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 
@@ -181,12 +192,20 @@ if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
 
         <div class="edit-photo-wrapper">
             <div class="user-info-card">
-                <div class="welcome-badge"><i class="fas fa-smile"></i> Admin Profile</div>
-                <div class="user-fullname"><?php echo htmlspecialchars($admin_name); ?></div>
-                <div class="user-reg-number"><?php echo htmlspecialchars($admin_reg_no); ?></div>
+                <div class="welcome-badge"><i class="fas fa-smile"></i> ICT Staff Profile</div>
+                <div class="user-fullname"><?php echo htmlspecialchars($staff_name); ?></div>
+                <div class="user-reg-number"><?php echo htmlspecialchars($staff_reg_no); ?></div>
             </div>
 
-           
+            <div class="photo-preview-card">
+                <div class="photo-circle-preview" id="photoPreview">
+                    <?php if ($display_photo): ?>
+                        <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($display_photo); ?>" alt="Current Photo" id="previewImage">
+                    <?php else: ?>
+                        <i class="fas fa-laptop-code"></i>
+                    <?php endif; ?>
+                </div>
+            </div>
 
             <form method="POST" action="" enctype="multipart/form-data">
                 <div class="upload-card">

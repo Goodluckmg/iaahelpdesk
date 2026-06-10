@@ -50,6 +50,25 @@ $departments = [];
 while($dept = mysqli_fetch_assoc($dept_result)) {
     $departments[$dept['id']] = $dept['name'];
 }
+
+// ========== GET ACTIVE ANNOUNCEMENTS ==========
+$announcements_query = "SELECT * FROM announcements 
+                        WHERE is_active = 1 
+                        AND (target_audience = 'all' OR target_audience = 'students')
+                        AND (start_date IS NULL OR start_date <= NOW())
+                        AND (end_date IS NULL OR end_date >= NOW())
+                        ORDER BY 
+                            CASE WHEN type = 'maintenance' THEN 1
+                                 WHEN type = 'warning' THEN 2
+                                 ELSE 3 END,
+                            created_at DESC
+                        LIMIT 5";
+$announcements_result = mysqli_query($conn, $announcements_query);
+$active_announcements = [];
+while ($row = mysqli_fetch_assoc($announcements_result)) {
+    $active_announcements[] = $row;
+}
+// ==============================================
 ?>
 
 <!DOCTYPE html>
@@ -83,6 +102,56 @@ while($dept = mysqli_fetch_assoc($dept_result)) {
             font-size: 35px;
             color: white;
         }
+        
+        /* Announcement styles */
+        .announcement-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+        }
+        .announcement-maintenance {
+            border-left: 4px solid #c0392b;
+        }
+        .announcement-warning {
+            border-left: 4px solid #e67e22;
+        }
+        .announcement-info {
+            border-left: 4px solid #2c7da0;
+        }
+        .announcement-success {
+            border-left: 4px solid #27ae60;
+        }
+        .announcement-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        .announcement-title strong {
+            font-size: 0.9rem;
+            color: #0a2b38;
+        }
+        .announcement-date {
+            font-size: 0.7rem;
+            color: #64748b;
+            margin-left: auto;
+        }
+        .announcement-message {
+            font-size: 0.85rem;
+            color: #334155;
+            line-height: 1.5;
+        }
+        .badge-type {
+            padding: 2px 10px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+        .badge-maintenance { background: #fde8e8; color: #c0392b; }
+        .badge-warning { background: #fff3e0; color: #e67e22; }
+        .badge-info { background: #e0f0f5; color: #2c7da0; }
+        .badge-success { background: #d9f0e5; color: #27ae60; }
     </style>
 </head>
 <body>
@@ -133,35 +202,60 @@ while($dept = mysqli_fetch_assoc($dept_result)) {
                 <strong>📋 Recent student queries</strong>
                 <a href="student_submit-query.php" class="btn-primary"><i class="fas fa-plus"></i> New Query</a>
             </div>
-            <table>
-                <thead>
-                    <tr><th>Ticket No</th><th>Subject</th><th>Department</th><th>Status</th><th>Date</th></tr>
-                </thead>
-                <tbody>
-                    <?php if(mysqli_num_rows($recent_result) == 0): ?>
-                        <tr>
-                            <td colspan="5" style="text-align: center;">No queries yet. <a href="student_submit-query.php">Submit your first query</a>侧
-                        </tr>
-                    <?php else: ?>
-                        <?php while($ticket = mysqli_fetch_assoc($recent_result)): ?>
-                        <tr>
-                            <td><?php echo htmlspecialchars($ticket['ticket_no']); ?>
-                            <td><?php echo htmlspecialchars(substr($ticket['title'], 0, 40)); ?>
-                            <td><?php echo isset($departments[$ticket['department_id']]) ? htmlspecialchars($departments[$ticket['department_id']]) : 'Unknown'; ?>
-                            <td><span class="status-badge <?php echo $ticket['status'] == 'resolved' ? 'status-resolved' : ''; ?>"><?php echo ucfirst(str_replace('_', ' ', $ticket['status'])); ?></span>
-                            <td><?php echo date('d/m/Y', strtotime($ticket['created_at'])); ?>
-                        </tr>
-                        <?php endwhile; ?>
-                    <?php endif; ?>
-                </tbody>
-            </table>
+            <div style="overflow-x: auto;">
+                <table style="min-width: 500px;">
+                    <thead>
+                        <tr><th>Ticket No</th><th>Subject</th><th>Department</th><th>Status</th><th>Date</th></tr>
+                    </thead>
+                    <tbody>
+                        <?php if(mysqli_num_rows($recent_result) == 0): ?>
+                            <tr>
+                                <td colspan="5" style="text-align: center;">No queries yet. <a href="student_submit-query.php">Submit your first query</a>侧
+                            </tr>
+                        <?php else: ?>
+                            <?php while($ticket = mysqli_fetch_assoc($recent_result)): ?>
+                            <tr>
+                                <td><?php echo htmlspecialchars($ticket['ticket_no']); ?>侧
+                                <td><?php echo htmlspecialchars(substr($ticket['title'], 0, 40)); ?>侧
+                                <td><?php echo isset($departments[$ticket['department_id']]) ? htmlspecialchars($departments[$ticket['department_id']]) : 'Unknown'; ?>侧
+                                <td><span class="status-badge <?php echo $ticket['status'] == 'resolved' ? 'status-resolved' : ''; ?>"><?php echo ucfirst(str_replace('_', ' ', $ticket['status'])); ?></span>侧
+                                <td><?php echo date('d/m/Y', strtotime($ticket['created_at'])); ?>侧
+                            </tr>
+                            <?php endwhile; ?>
+                        <?php endif; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
 
-        <!-- ANNOUNCEMENTS -->
+        <!-- ANNOUNCEMENTS SECTION - ONLY THIS ADDED -->
+        <?php if (!empty($active_announcements)): ?>
         <div class="widget-card">
-            <div class="flex-between"><strong>📢 Announcement from IAA</strong></div>
-            <p>✅ Exam results will be released on 15th June. Use Helpdesk for missing marks queries.<br>🛠️ E-learning portal maintenance on Saturday from 8pm to 10pm.</p>
+            <div class="flex-between">
+                <strong>📢 Announcements</strong>
+            </div>
+            <?php foreach ($active_announcements as $ann): 
+                $ann_class = 'announcement-' . $ann['type'];
+                $badge_class = 'badge-' . $ann['type'];
+                $badge_text = $ann['type'] == 'maintenance' ? 'Maintenance' : ($ann['type'] == 'warning' ? 'Warning' : ($ann['type'] == 'success' ? 'Success' : 'Info'));
+            ?>
+            <div class="announcement-item <?php echo $ann_class; ?>">
+                <div class="announcement-title">
+                    <strong><?php echo htmlspecialchars($ann['title']); ?></strong>
+                    <span class="badge-type <?php echo $badge_class; ?>"><?php echo $badge_text; ?></span>
+                    <span class="announcement-date">
+                        <?php echo date('d/m/Y', strtotime($ann['created_at'])); ?>
+                    </span>
+                </div>
+                <div class="announcement-message">
+                    <?php echo nl2br(htmlspecialchars($ann['message'])); ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
         </div>
+        <?php endif; ?>
+        <!-- END ANNOUNCEMENTS SECTION -->
+
     </main>
 </div>
 

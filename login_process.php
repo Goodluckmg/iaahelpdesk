@@ -45,13 +45,13 @@ function redirectToDashboard($role, $user_id, $fullname, $username) {
             $_SESSION['staff_id'] = $user_id;
             $_SESSION['staff_no'] = $username;
             $_SESSION['staff_role'] = 'ict';
-            header("Location: ict_dashboard.php");
+            header("Location: ict.php");
             break;
         case 'finance':
             $_SESSION['staff_id'] = $user_id;
             $_SESSION['staff_no'] = $username;
             $_SESSION['staff_role'] = 'finance';
-            header("Location: finance_dashboard.php");
+            header("Location: finance.php");
             break;
         case 'admin':
         case 'super_admin':

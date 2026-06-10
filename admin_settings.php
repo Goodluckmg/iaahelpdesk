@@ -24,17 +24,19 @@ if (!$logged_user_id) {
     exit();
 }
 
-// ========== GET PROFILE PHOTO - FIXED ==========
-$photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
-$photo_result = mysqli_query($conn, $photo_query);
-
-if ($photo_result && mysqli_num_rows($photo_result) > 0) {
-    $admin_data = mysqli_fetch_assoc($photo_result);
-    $current_photo = $admin_data['profile_photo'] ?? null;
+// Get profile photo - priority session first
+$current_photo = null;
+if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
+    $current_photo = $_SESSION['profile_photo'];
 } else {
-    $current_photo = null;
+    $photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
+    $photo_result = mysqli_query($conn, $photo_query);
+    if ($photo_result && mysqli_num_rows($photo_result) > 0) {
+        $admin_data = mysqli_fetch_assoc($photo_result);
+        $current_photo = $admin_data['profile_photo'] ?? null;
+        $_SESSION['profile_photo'] = $current_photo; // Store in session
+    }
 }
-
 // Create settings table if not exists
 $create_table = "
 CREATE TABLE IF NOT EXISTS system_settings (

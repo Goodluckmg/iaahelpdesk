@@ -26,17 +26,19 @@ if (!$logged_user_id) {
 
 $is_super_admin = ($_SESSION['role'] === 'super_admin');
 
-// ========== GET PROFILE PHOTO - FIXED ==========
-$photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
-$photo_result = mysqli_query($conn, $photo_query);
-
-if ($photo_result && mysqli_num_rows($photo_result) > 0) {
-    $admin_data = mysqli_fetch_assoc($photo_result);
-    $current_photo = $admin_data['profile_photo'] ?? null;
+// Get profile photo - priority session first
+$current_photo = null;
+if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
+    $current_photo = $_SESSION['profile_photo'];
 } else {
-    $current_photo = null;
+    $photo_query = "SELECT profile_photo FROM students WHERE id = $logged_user_id";
+    $photo_result = mysqli_query($conn, $photo_query);
+    if ($photo_result && mysqli_num_rows($photo_result) > 0) {
+        $admin_data = mysqli_fetch_assoc($photo_result);
+        $current_photo = $admin_data['profile_photo'] ?? null;
+        $_SESSION['profile_photo'] = $current_photo; // Store in session
+    }
 }
-
 // Pagination
 $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 20;
@@ -64,28 +66,6 @@ $tickets_query = "SELECT t.*, s.fullname as student_name, s.reg_no, d.name as de
                   ORDER BY t.created_at DESC
                   LIMIT $limit OFFSET $offset";
 $tickets_result = mysqli_query($conn, $tickets_query);
-
-// Handle ticket actions (resolve, assign, etc.)
-if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    if (isset($_POST['update_status'])) {
-        $ticket_id = (int)$_POST['ticket_id'];
-        $new_status = mysqli_real_escape_string($conn, $_POST['status']);
-        $update = "UPDATE tickets SET status = '$new_status', updated_at = NOW() WHERE id = $ticket_id";
-        if (mysqli_query($conn, $update)) {
-            $success = "Ticket status updated successfully!";
-        } else {
-            $error = "Error updating ticket: " . mysqli_error($conn);
-        }
-    }
-    
-    if (isset($_POST['assign_ticket']) && $is_super_admin) {
-        $ticket_id = (int)$_POST['ticket_id'];
-        $staff_id = (int)$_POST['staff_id'];
-        $update = "UPDATE tickets SET assigned_to = $staff_id WHERE id = $ticket_id";
-        mysqli_query($conn, $update);
-        $success = "Ticket assigned successfully!";
-    }
-}
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -133,9 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         .pagination { display: flex; gap: 10px; justify-content: center; margin-top: 20px; }
         .pagination a { padding: 8px 12px; background: #e2e8f0; border-radius: 8px; text-decoration: none; color: #0f172a; }
         .pagination a.active { background: #2c7da0; color: white; }
-        .alert { padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; }
-        .alert-success { background: #d9f0e5; color: #1d6f42; border-left: 4px solid #1d6f42; }
-        .alert-error { background: #fde8e8; color: #c0392b; border-left: 4px solid #c0392b; }
     </style>
 </head>
 <body>
@@ -173,13 +150,6 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             <div class="date-badge"><i class="far fa-calendar-alt"></i> <?php echo date('D, M j, Y'); ?></div>
         </div>
 
-        <?php if (isset($success)): ?>
-            <div class="alert alert-success"><?php echo $success; ?></div>
-        <?php endif; ?>
-        <?php if (isset($error)): ?>
-            <div class="alert alert-error"><?php echo $error; ?></div>
-        <?php endif; ?>
-
         <div class="widget-card">
             <div class="flex-between">
                 <strong>📋 Ticket List</strong>
@@ -212,7 +182,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                     <tbody>
                         <?php if (mysqli_num_rows($tickets_result) == 0): ?>
                             <tr><td colspan="9" style="text-align: center;">No tickets found.<?php else: ?>
-                            <?php while ($ticket = mysqli_fetch_assoc($tickets_result)): ?>
+                            <?php while ($ticket = mysqli_fetch_assoc($tickets_result)): 
+                                $attachment_path = !empty($ticket['attachment']) ? $ticket['attachment'] : ($ticket['document_path'] ?? '');
+                            ?>
                                 <tr>
                                     <td><?php echo $ticket['id']; ?></td>
                                     <td><?php echo htmlspecialchars($ticket['ticket_no']); ?></td>
@@ -226,28 +198,26 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
                                         ?>">
                                             <?php echo ucfirst($ticket['priority']); ?>
                                         </span>
+                                    </span>
                                     </td>
                                     <td>
                                         <span class="status-badge status-<?php echo $ticket['status']; ?>">
                                             <?php echo ucfirst(str_replace('_', ' ', $ticket['status'])); ?>
                                         </span>
-                                    </td>
+                                    </span>
+                                    <td>
                                     <td><?php echo date('d/m/Y', strtotime($ticket['created_at'])); ?></td>
                                     <td>
-                                        <a href="admin_view_ticket.php?id=<?php echo $ticket['id']; ?>" class="btn-view">View</a>
-                                        <?php if ($is_super_admin): ?>
-                                            <form method="POST" style="display: inline-block;">
-                                                <input type="hidden" name="ticket_id" value="<?php echo $ticket['id']; ?>">
-                                                <select name="status" onchange="this.form.submit()" style="padding: 2px; font-size: 0.7rem;">
-                                                    <option value="">Update</option>
-                                                    <option value="open">Open</option>
-                                                    <option value="in_progress">In Progress</option>
-                                                    <option value="resolved">Resolved</option>
-                                                    <option value="closed">Closed</option>
-                                                </select>
-                                                <input type="hidden" name="update_status" value="1">
-                                            </form>
+                                        <?php if (!empty($attachment_path) && file_exists($attachment_path)): ?>
+                                            <a href="<?php echo htmlspecialchars($attachment_path); ?>" target="_blank" class="btn-view">
+                                                <i class="fas fa-eye"></i> View Document
+                                            </a>
+                                        <?php else: ?>
+                                            <a href="admin_view_ticket.php?id=<?php echo $ticket['id']; ?>" class="btn-view">
+                                                <i class="fas fa-eye"></i> View Ticket
+                                            </a>
                                         <?php endif; ?>
+                                    </span>
                                     </td>
                                 </tr>
                             <?php endwhile; ?>
