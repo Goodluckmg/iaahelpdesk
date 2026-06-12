@@ -154,22 +154,24 @@ function getAllReplies($conn, $ticket_id) {
         .replies-container { display: none; margin-top: 12px; }
         .replies-container.show { display: block; }
         
-        /* Button styles */
-        .btn-view-badge {
+        /* Button styles - for PDF badge */
+        .btn-pdf-badge {
             background: #27ae60;
             border: none;
-            padding: 10px 24px;
-            border-radius: 30px;
+            padding: 5px 12px;
+            border-radius: 20px;
             color: white;
             cursor: pointer;
             font-weight: bold;
             text-decoration: none;
             display: inline-flex;
             align-items: center;
-            gap: 10px;
+            gap: 5px;
+            font-size: 0.7rem;
             transition: 0.2s;
+            margin-top: 8px;
         }
-        .btn-view-badge:hover {
+        .btn-pdf-badge:hover {
             background: #1e8449;
             transform: scale(1.02);
         }
@@ -225,17 +227,11 @@ function getAllReplies($conn, $ticket_id) {
                         $rating_value = $has_rating ? $rated_tickets[$ticket['id']] : null;
                         $replies = getAllReplies($conn, $ticket['id']);
                         $has_badge = ($ticket['payment_verified'] == 1 && !empty($ticket['badge_code']));
-                        
-                        // Get programme/department name
-                        $programme = $ticket['department_name'] ?? 'Information Technology';
-                        $pass_id = 'IAA-EX-' . date('Y') . '-' . str_pad($ticket['id'], 6, '0', STR_PAD_LEFT);
-                        $issue_date = date('d F Y', strtotime($ticket['verified_at'] ?? $ticket['created_at']));
-                        $expiry_date = date('d F Y', strtotime('+45 days', strtotime($ticket['verified_at'] ?? $ticket['created_at'])));
                     ?>
                         <div class="ticket-item" data-ticket-id="<?php echo $ticket['id']; ?>">
                             <div style="display:flex; justify-content:space-between; flex-wrap:wrap;">
                                 <strong>#<?php echo htmlspecialchars($ticket['ticket_no']); ?> - <?php echo htmlspecialchars($ticket['title']); ?></strong>
-                                <span class="status-badge <?php echo $ticket['status'] == 'resolved' ? 'status-resolved' : ''; ?>">
+                                <span class="status-badge <?php echo $ticket['status'] == 'resolved' ? 'status-resolved' : 'status-open'; ?>">
                                     <?php echo ucfirst(str_replace('_', ' ', $ticket['status'])); ?>
                                 </span>
                             </div>
@@ -255,18 +251,6 @@ function getAllReplies($conn, $ticket_id) {
                                 </div>
                             <?php endif; ?>
                             
-                            <!-- ========== SIMPLE BUTTON - Opens badge in new tab ========== -->
-                            <?php if($has_badge): ?>
-                                <div style="margin-top: 15px; text-align: center;">
-                                    <a href="generate_badge.php?badge=<?php echo urlencode($ticket['badge_code']); ?>" 
-                                       target="_blank"
-                                       class="btn-view-badge">
-                                        <i class="fas fa-eye"></i> View (PDF)
-                                    </a>
-                                </div>
-                            <?php endif; ?>
-                            <!-- ========== END BUTTON SECTION ========== -->
-                            
                             <!-- Replies Section -->
                             <?php if (!empty($replies)): ?>
                                 <div class="reply-section">
@@ -280,6 +264,7 @@ function getAllReplies($conn, $ticket_id) {
                                         <?php foreach ($replies as $reply): 
                                             $is_staff = ($reply['reply_type'] !== 'student');
                                             $reply_class = $is_staff ? 'reply-staff' : 'reply-you';
+                                            $is_finance_officer = ($reply['user_name'] == 'Finance Officer');
                                         ?>
                                             <div class="reply-item <?php echo $reply_class; ?>">
                                                 <div class="reply-header">
@@ -287,6 +272,18 @@ function getAllReplies($conn, $ticket_id) {
                                                     <small><?php echo date('d/m/Y H:i', strtotime($reply['created_at'])); ?></small>
                                                 </div>
                                                 <div class="reply-message"><?php echo nl2br(htmlspecialchars($reply['message'])); ?></div>
+                                                
+                                                <!-- ========== PDF BADGE BUTTON - Appears ONLY in Finance Officer's reply ========== -->
+                                                <?php if($is_finance_officer && $has_badge): ?>
+                                                    <div style="margin-top: 10px;">
+                                                        <a href="generate_badge.php?badge=<?php echo urlencode($ticket['badge_code']); ?>" 
+                                                           target="_blank"
+                                                           class="btn-pdf-badge">
+                                                            <i class="fas fa-file-pdf"></i> Download badge
+                                                        </a>
+                                                    </div>
+                                                <?php endif; ?>
+                                                <!-- ========== END PDF BADGE BUTTON ========== -->
                                             </div>
                                         <?php endforeach; ?>
                                     </div>

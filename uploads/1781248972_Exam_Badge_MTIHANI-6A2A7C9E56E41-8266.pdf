@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Examination Clearance Badge</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #e8f0f5;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+        .badge-container {
+            max-width: 750px;
+            width: 100%;
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+            overflow: hidden;
+            border: 1px solid #d4af37;
+        }
+        .badge-border {
+            border: 2px solid #d4af37;
+            margin: 15px;
+            border-radius: 15px;
+            overflow: hidden;
+        }
+        .badge-header {
+            background: linear-gradient(135deg, #0a2b38, #0d3b4c);
+            color: white;
+            text-align: center;
+            padding: 25px 20px;
+        }
+        .institution-name { font-size: 1.8rem; font-weight: 700; letter-spacing: 1px; }
+        .institution-tagline { font-size: 0.8rem; opacity: 0.8; margin-top: 5px; }
+        .clearance-title {
+            text-align: center;
+            padding: 20px;
+            background: #fef9e6;
+            border-bottom: 2px solid #d4af37;
+        }
+        .clearance-title h2 { color: #c0392b; font-size: 1.5rem; letter-spacing: 1px; }
+        .clearance-title p { color: #e67e22; font-size: 0.85rem; margin-top: 5px; }
+        .badge-content { padding: 25px; }
+        .info-row { display: flex; margin-bottom: 15px; padding-bottom: 10px; border-bottom: 1px dashed #e2edf2; }
+        .info-label { width: 130px; font-weight: 600; color: #0a2b38; }
+        .info-value { flex: 1; color: #2c3e50; font-weight: 500; }
+        .stamp-section {
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 2px solid #d4af37;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+        .stamp-circle {
+            width: 80px;
+            height: 80px;
+            border: 3px solid #c0392b;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(192,57,43,0.05);
+        }
+        .stamp-circle i { font-size: 40px; color: #c0392b; }
+        .badge-footer {
+            background: #f8fafc;
+            padding: 15px;
+            text-align: center;
+            border-top: 1px solid #e2edf2;
+        }
+        .pass-id { font-family: monospace; font-size: 0.85rem; color: #2c7da0; font-weight: bold; }
+        .disclaimer { font-size: 0.65rem; color: #7f8c8d; margin-top: 10px; }
+        .badge-code { font-family: monospace; background: #f0f0f0; padding: 8px; border-radius: 8px; text-align: center; margin: 15px 0; }
+        @media print {
+            body { background: white; padding: 0; }
+            .badge-container { box-shadow: none; margin: 0; }
+        }
+    </style>
+</head>
+<body>
+<div class="badge-container" id="badgeContent">
+    <div class="badge-border">
+        <div class="badge-header">
+            <div class="institution-name">INSTITUTE OF ACCOUNTANCY ARUSHA</div>
+            <div class="institution-tagline">Excellence and Professionalism</div>
+        </div>
+        <div class="clearance-title">
+            <h2>📜 SPECIAL EXAMINATION CLEARANCE PASS</h2>
+            <p>Authorized to Sit for Examination Pending Administrative Clearance</p>
+        </div>
+        <div class="badge-content">
+            <div class="info-row">
+                <div class="info-label">Name:</div>
+                <div class="info-value">GOODLUCK</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Reg. No.:</div>
+                <div class="info-value">odait/002</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Programme:</div>
+                <div class="info-value">Information Technology</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Academic Year:</div>
+                <div class="info-value">2025/2026</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Issue Date:</div>
+                <div class="info-value">11 June 2026</div>
+            </div>
+            <div class="info-row">
+                <div class="info-label">Expiry Date:</div>
+                <div class="info-value">26 July 2026</div>
+            </div>
+            <div class="badge-code">
+                <strong>Badge Code:</strong> MTIHANI-6A2A7C9E56E41-8266            </div>
+            <div class="stamp-section">
+                <div class="officer-signature" style="text-align: center;">
+                    <div style="width: 200px; height: 50px; border-bottom: 1px solid #0a2b38; margin-bottom: 5px;"></div>
+                    <div class="officer-name" style="font-weight: 700;">majaliwa</div>
+                    <div class="officer-title" style="font-size: 0.7rem;">Finance Officer</div>
+                </div>
+                <div class="stamp">
+                    <div class="stamp-circle">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <div class="stamp-text" style="font-size: 0.65rem; color: #c0392b; margin-top: 5px; font-weight: bold;">AUTHORIZED</div>
+                </div>
+            </div>
+        </div>
+        <div class="badge-footer">
+            <div class="pass-id">PASS ID: IAA-EX-2026-000011</div>
+            <div class="disclaimer">This pass is valid only for the specified examination and must be presented together with a valid student ID.</div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+<script>
+        // Auto download PDF when download parameter is set
+    window.onload = function() {
+        const element = document.getElementById('badgeContent');
+        const opt = {
+            margin: [0.5, 0.5, 0.5, 0.5],
+            filename: 'Exam_Badge_MTIHANI-6A2A7C9E56E41-8266.pdf',
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: { scale: 2, letterRendering: true },
+            jsPDF: { unit: 'in', format: 'a4', orientation: 'portrait' }
+        };
+        html2pdf().set(opt).from(element).save();
+    };
+    </script>
+</body>
+</html>

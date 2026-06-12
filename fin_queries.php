@@ -15,10 +15,23 @@ if ($_SESSION['role'] !== 'finance' && $_SESSION['role'] !== 'super_admin') {
 
 require_once 'config/database.php';
 
-// ========== FIXED: Get officer ID from correct session variable ==========
+// ========== Get officer ID ==========
 $officer_id = $_SESSION['user_id'] ?? $_SESSION['staff_id'] ?? $_SESSION['student_id'] ?? 0;
 $fullname = $_SESSION['fullname'] ?? 'Finance Officer';
 $reg_no = $_SESSION['reg_no'] ?? $_SESSION['staff_no'] ?? 'FIN/2024/001';
+
+// If officer_id is 0, try to get from staff table
+if ($officer_id == 0) {
+    $find_finance = mysqli_query($conn, "SELECT id, fullname, staff_no FROM staff WHERE role = 'finance' LIMIT 1");
+    if ($find_finance && mysqli_num_rows($find_finance) > 0) {
+        $finance_data = mysqli_fetch_assoc($find_finance);
+        $officer_id = $finance_data['id'];
+        $fullname = $finance_data['fullname'];
+        $reg_no = $finance_data['staff_no'];
+        $_SESSION['user_id'] = $officer_id;
+        $_SESSION['staff_id'] = $officer_id;
+    }
+}
 
 // ========== Ensure finance officer exists in students table ==========
 if ($officer_id > 0) {
@@ -48,80 +61,99 @@ if ($photo_result && mysqli_num_rows($photo_result) > 0) {
     $current_photo = $student_data['profile_photo'] ?? null;
 }
 
-// ========== Handle payment verification - FIXED ==========
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'verify_payment') {
-    header('Content-Type: application/json');
-    header('Cache-Control: no-cache, must-revalidate');
-    
-    $ticket_id = isset($_POST['ticket_id']) ? intval($_POST['ticket_id']) : 0;
-    
-    if ($ticket_id <= 0) {
-        echo json_encode(['success' => false, 'message' => 'Invalid ticket ID']);
-        exit();
-    }
-    
-    // Check if ticket exists
-    $check_ticket = mysqli_query($conn, "SELECT id, payment_verified FROM tickets WHERE id = $ticket_id");
-    if (mysqli_num_rows($check_ticket) == 0) {
-        echo json_encode(['success' => false, 'message' => 'Ticket not found']);
-        exit();
-    }
-    
-    $ticket_data = mysqli_fetch_assoc($check_ticket);
-    if ($ticket_data['payment_verified'] == 1) {
-        echo json_encode(['success' => false, 'message' => 'Payment already verified for this ticket']);
-        exit();
-    }
-    
-    $badge_code = 'MTIHANI-' . strtoupper(uniqid()) . '-' . rand(1000, 9999);
-    
-    $update = "UPDATE tickets SET 
-                payment_verified = 1, 
-                badge_code = '$badge_code', 
-                verified_by = $officer_id, 
-                verified_at = NOW() 
-              WHERE id = $ticket_id";
-    
-    if (mysqli_query($conn, $update)) {
-        // ========== UPDATED RESPONSE MESSAGE - Inaelekeza kwenye PDF Badge ==========
-        $response_msg = "✅ PAYMENT VERIFIED! Your payment has been confirmed. \n\n📋 Your Examination Clearance Badge is now available.\n\n🔹 Go to 'My Queries' and click 'Download PDF Badge' to get your official clearance pass for examination.\n\n🔹 Badge Code: $badge_code";
-        // ===========================================================================
+// ========== Handle payment verification ==========
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // Check if this is a verification request (has verify_payment field)
+    if (isset($_POST['verify_payment']) && $_POST['verify_payment'] == '1') {
+        header('Content-Type: application/json');
         
-        $insert_response = "INSERT INTO responses (ticket_id, responder_id, responder_role, message) 
-                           VALUES ($ticket_id, $officer_id, 'finance', '$response_msg')";
-        mysqli_query($conn, $insert_response);
+        $ticket_id = isset($_POST['ticket_id']) ? intval($_POST['ticket_id']) : 0;
+        $issue_date = isset($_POST['issue_date']) ? $_POST['issue_date'] : date('Y-m-d');
+        $expiry_date = isset($_POST['expiry_date']) ? $_POST['expiry_date'] : date('Y-m-d', strtotime('+30 days'));
         
-        // Also update ticket status to in_progress
-        mysqli_query($conn, "UPDATE tickets SET status = 'in_progress', updated_at = NOW() WHERE id = $ticket_id");
+        if ($ticket_id <= 0) {
+            echo json_encode(['success' => false, 'message' => 'Invalid ticket ID']);
+            exit();
+        }
         
-        echo json_encode(['success' => true, 'badge_code' => $badge_code]);
-    } else {
-        echo json_encode(['success' => false, 'message' => 'Database error: ' . mysqli_error($conn)]);
-    }
-    exit();
-}
-
-// Handle regular response submission
-$success_message = null;
-$error_message = null;
-
-if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['respond_query'])) {
-    $ticket_id = (int)$_POST['ticket_id'];
-    $response_msg = mysqli_real_escape_string($conn, $_POST['response_message']);
-    $new_status = isset($_POST['new_status']) ? mysqli_real_escape_string($conn, $_POST['new_status']) : 'in_progress';
-    
-    if (empty($response_msg)) {
-        $error_message = "Please enter a response message.";
-    } else {
-        $insert_response = "INSERT INTO responses (ticket_id, responder_id, responder_role, message) 
-                            VALUES ($ticket_id, $officer_id, 'finance', '$response_msg')";
+        // Check if ticket exists
+        $check_ticket = mysqli_query($conn, "SELECT id, payment_verified FROM tickets WHERE id = $ticket_id");
+        if (mysqli_num_rows($check_ticket) == 0) {
+            echo json_encode(['success' => false, 'message' => 'Ticket not found']);
+            exit();
+        }
         
-        if (mysqli_query($conn, $insert_response)) {
-            $update_ticket = "UPDATE tickets SET status = '$new_status', updated_at = NOW() WHERE id = $ticket_id";
-            mysqli_query($conn, $update_ticket);
-            $success_message = "Response sent successfully!";
+        $ticket_data = mysqli_fetch_assoc($check_ticket);
+        if ($ticket_data['payment_verified'] == 1) {
+            echo json_encode(['success' => false, 'message' => 'Payment already verified for this ticket']);
+            exit();
+        }
+        
+        // Generate unique badge code
+        $badge_code = 'MTIHANI-' . strtoupper(uniqid()) . '-' . rand(1000, 9999);
+        
+        // Update ticket
+        $update = "UPDATE tickets SET 
+                    payment_verified = 1, 
+                    badge_code = '$badge_code',
+                    badge_issue_date = '$issue_date',
+                    badge_expiry_date = '$expiry_date',
+                    verified_by = $officer_id, 
+                    verified_at = NOW(),
+                    status = 'resolved'
+                  WHERE id = $ticket_id";
+        
+        if (mysqli_query($conn, $update)) {
+            // Format dates
+            $formatted_issue = date('d/m/Y', strtotime($issue_date));
+            $formatted_expiry = date('d/m/Y', strtotime($expiry_date));
+            
+            $response_msg = "✅ PAYMENT VERIFIED! Your payment has been confirmed.\n\n";
+            $response_msg .= "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+            $response_msg .= "📋 EXAMINATION BADGE DETAILS\n";
+            $response_msg .= "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n";
+            $response_msg .= "🔹 Badge Code: $badge_code\n";
+            $response_msg .= "📅 Issue Date: $formatted_issue\n";
+            $response_msg .= "⏰ Expiry Date: $formatted_expiry\n";
+            $response_msg .= "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n\n";
+            $response_msg .= "🔹 To download your badge: Go to 'My Queries' and click 'Download Badge' button.\n";
+            $response_msg .= "⚠️ Note: This badge expires on $formatted_expiry.";
+            
+            $insert_response = "INSERT INTO responses (ticket_id, responder_id, responder_role, message) 
+                               VALUES ($ticket_id, $officer_id, 'finance', '" . mysqli_real_escape_string($conn, $response_msg) . "')";
+            mysqli_query($conn, $insert_response);
+            
+            echo json_encode([
+                'success' => true, 
+                'badge_code' => $badge_code,
+                'issue_date' => $formatted_issue,
+                'expiry_date' => $formatted_expiry
+            ]);
         } else {
-            $error_message = "Database error: " . mysqli_error($conn);
+            echo json_encode(['success' => false, 'message' => 'Database error: ' . mysqli_error($conn)]);
+        }
+        exit();
+    }
+    
+    // Handle regular response submission
+    if (isset($_POST['respond_query']) && $_POST['respond_query'] == '1') {
+        $ticket_id = (int)$_POST['ticket_id'];
+        $response_msg = mysqli_real_escape_string($conn, $_POST['response_message']);
+        $new_status = isset($_POST['new_status']) ? mysqli_real_escape_string($conn, $_POST['new_status']) : 'in_progress';
+        
+        if (empty($response_msg)) {
+            $error_message = "Please enter a response message.";
+        } else {
+            $insert_response = "INSERT INTO responses (ticket_id, responder_id, responder_role, message) 
+                                VALUES ($ticket_id, $officer_id, 'finance', '$response_msg')";
+            
+            if (mysqli_query($conn, $insert_response)) {
+                $update_ticket = "UPDATE tickets SET status = '$new_status', updated_at = NOW() WHERE id = $ticket_id";
+                mysqli_query($conn, $update_ticket);
+                $success_message = "Response sent successfully!";
+            } else {
+                $error_message = "Database error: " . mysqli_error($conn);
+            }
         }
     }
 }
@@ -208,12 +240,17 @@ $result = mysqli_query($conn, $query);
         .close-modal { cursor: pointer; font-size: 1.5rem; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
+        .form-group label .required { color: red; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; }
+        .form-row { display: flex; gap: 15px; margin-bottom: 15px; }
+        .form-row .form-group { flex: 1; margin-bottom: 0; }
         .attachment-link { background: #e8f0f5; padding: 10px; border-radius: 10px; margin-top: 10px; }
         .message { padding: 10px 14px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
         .message-success { background: #d9f0e5; color: #1d6f42; }
         .message-error { background: #fde8e8; color: #c0392b; }
-        @media (max-width: 768px) { .sidebar { width: 80px; } .nav-label, .welcome-text, .user-name, .user-role, .user-id { display: none; } }
+        .badge-settings { background: #e8f0f5; padding: 15px; border-radius: 10px; margin: 15px 0; border-left: 3px solid #27ae60; }
+        .badge-settings h4 { margin-bottom: 10px; color: #1e8449; }
+        @media (max-width: 768px) { .sidebar { width: 80px; } .nav-label, .welcome-text, .user-name, .user-role, .user-id { display: none; } .form-row { flex-direction: column; gap: 10px; } }
     </style>
 </head>
 <body>
@@ -293,11 +330,11 @@ $result = mysqli_query($conn, $query);
                                 <td><span class="status-badge status-<?php echo $row['status']; ?>"><?php echo ucfirst(str_replace('_', ' ', $row['status'])); ?></span></td>
                                 <td><?php echo date('d/m/Y H:i', strtotime($row['created_at'])); ?></td>
                                 <td>
-                                    <button class="btn-primary respond-btn" data-id="<?php echo $row['id']; ?>" data-ticket="<?php echo $row['ticket_no']; ?>" data-student="<?php echo htmlspecialchars($row['student_name']); ?>" data-reg="<?php echo $row['student_reg']; ?>" data-title="<?php echo htmlspecialchars($row['title']); ?>" data-desc="<?php echo htmlspecialchars($row['description']); ?>" data-status="<?php echo $row['status']; ?>" data-hasdoc="<?php echo $row['has_document']; ?>" data-docname="<?php echo $row['document_name']; ?>" data-docpath="<?php echo $row['document_path']; ?>" style="padding:4px 12px; font-size:0.7rem;">
+                                    <button class="btn-primary respond-btn" data-id="<?php echo $row['id']; ?>" data-ticket="<?php echo $row['ticket_no']; ?>" data-student="<?php echo htmlspecialchars($row['student_name']); ?>" data-reg="<?php echo $row['student_reg']; ?>" data-title="<?php echo htmlspecialchars($row['title']); ?>" data-desc="<?php echo htmlspecialchars($row['description']); ?>" data-status="<?php echo $row['status']; ?>" data-hasdoc="<?php echo $row['has_document']; ?>" data-docname="<?php echo $row['document_name']; ?>" data-docpath="<?php echo $row['document_path']; ?>" data-payment_verified="<?php echo $row['payment_verified']; ?>" style="padding:4px 12px; font-size:0.7rem;">
                                         <i class="fas fa-reply"></i> Respond
                                     </button>
-                                </td>
-                            </tr>
+                                 </td>
+                             </tr>
                             <?php endwhile; ?>
                         </tbody>
                     </table>
@@ -307,14 +344,14 @@ $result = mysqli_query($conn, $query);
     </main>
 </div>
 
-<!-- RESPOND MODAL with VERIFY BUTTON -->
+<!-- RESPOND MODAL with BADGE VERIFICATION -->
 <div id="respondModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
             <h3><i class="fas fa-reply"></i> Respond to Student Query</h3>
             <span class="close-modal">&times;</span>
         </div>
-        <form method="POST" class="modal-body">
+        <div class="modal-body">
             <div class="form-group"><label>Ticket Number</label><input type="text" id="ticketNo" readonly style="background:#f5f5f5;"></div>
             <div class="form-group"><label>Student</label><input type="text" id="studentName" readonly style="background:#f5f5f5;"></div>
             <div class="form-group"><label>Registration Number</label><input type="text" id="studentReg" readonly style="background:#f5f5f5;"></div>
@@ -323,27 +360,49 @@ $result = mysqli_query($conn, $query);
             <div id="attachmentDiv" class="attachment-link" style="display:none;">
                 <i class="fas fa-paperclip"></i> Attached Document: <a href="#" id="attachmentLink" target="_blank">View Document</a>
             </div>
+            
+            <!-- BADGE SETTINGS SECTION -->
+            <div class="badge-settings">
+                <h4><i class="fas fa-certificate"></i> Examination Badge Settings</h4>
+                <p style="font-size: 0.75rem; margin-bottom: 10px; color: #1e8449;">
+                    <i class="fas fa-info-circle"></i> System will automatically generate the badge code and make it available for student to download.
+                </p>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Issue Date <span class="required">*</span></label>
+                        <input type="date" id="issueDate" value="<?php echo date('Y-m-d'); ?>">
+                    </div>
+                    <div class="form-group">
+                        <label>Expiry Date <span class="required">*</span></label>
+                        <input type="date" id="expiryDate" value="<?php echo date('Y-m-d', strtotime('+30 days')); ?>">
+                    </div>
+                </div>
+            </div>
+            
             <div class="form-group">
                 <label>Your Response <span style="color:red">*</span></label>
-                <textarea name="response_message" id="responseMsg" rows="4" required placeholder="Write your response..."></textarea>
+                <textarea id="responseMsg" rows="4" placeholder="Write your response..."></textarea>
             </div>
             <div class="form-group">
                 <label>Update Status</label>
-                <select name="new_status" id="newStatus">
+                <select id="newStatus">
                     <option value="in_progress">In Progress - Being Reviewed</option>
                     <option value="resolved">Resolved - Issue Fixed</option>
                 </select>
             </div>
-            <input type="hidden" name="ticket_id" id="ticketId">
-            <input type="hidden" name="respond_query" value="1">
+            <input type="hidden" id="ticketId">
+            
             <div style="display:flex; gap:10px; margin-top:20px; flex-wrap:wrap;">
                 <button type="button" class="btn-primary" id="verifyPaymentBtn" style="background:#27ae60;">
                     <i class="fas fa-check-circle"></i> ✅ Verify Payment & Issue Badge
                 </button>
+                <button type="button" class="btn-primary" id="sendResponseBtn" style="background:#f39c12;">
+                    <i class="fas fa-paper-plane"></i> Send Response Only
+                </button>
                 <button type="button" class="btn-primary" id="cancelModalBtn" style="background:#7f8c8d;">Cancel</button>
-                <button type="submit" class="btn-primary">Send Response</button>
             </div>
-        </form>
+        </div>
     </div>
 </div>
 
@@ -358,18 +417,56 @@ $result = mysqli_query($conn, $query);
     const modal = document.getElementById('respondModal');
     const closeModal = document.querySelector('.close-modal');
     const cancelBtn = document.getElementById('cancelModalBtn');
+    const sendResponseBtn = document.getElementById('sendResponseBtn');
+
+    // Store current ticket data
+    let currentTicket = {};
 
     document.querySelectorAll('.respond-btn').forEach(btn => {
         btn.addEventListener('click', () => {
-            document.getElementById('ticketId').value = btn.dataset.id;
-            document.getElementById('ticketNo').value = btn.dataset.ticket;
-            document.getElementById('studentName').value = btn.dataset.student;
-            document.getElementById('studentReg').value = btn.dataset.reg;
-            document.getElementById('queryTitle').value = btn.dataset.title;
-            document.getElementById('queryDesc').value = btn.dataset.desc;
+            currentTicket = {
+                id: btn.dataset.id,
+                no: btn.dataset.ticket,
+                student: btn.dataset.student,
+                reg: btn.dataset.reg,
+                title: btn.dataset.title,
+                desc: btn.dataset.desc,
+                status: btn.dataset.status,
+                hasdoc: btn.dataset.hasdoc,
+                docname: btn.dataset.docname,
+                docpath: btn.dataset.docpath,
+                payment_verified: btn.dataset.payment_verified
+            };
+            
+            document.getElementById('ticketId').value = currentTicket.id;
+            document.getElementById('ticketNo').value = currentTicket.no;
+            document.getElementById('studentName').value = currentTicket.student;
+            document.getElementById('studentReg').value = currentTicket.reg;
+            document.getElementById('queryTitle').value = currentTicket.title;
+            document.getElementById('queryDesc').value = currentTicket.desc;
+            
+            // Check if payment already verified
+            const verifyBtn = document.getElementById('verifyPaymentBtn');
+            if (currentTicket.payment_verified == '1') {
+                verifyBtn.disabled = true;
+                verifyBtn.style.opacity = '0.5';
+                verifyBtn.style.cursor = 'not-allowed';
+                verifyBtn.title = 'Payment already verified for this ticket';
+            } else {
+                verifyBtn.disabled = false;
+                verifyBtn.style.opacity = '1';
+                verifyBtn.style.cursor = 'pointer';
+            }
+            
+            // Set default dates
+            const today = new Date().toISOString().split('T')[0];
+            const expiryDate = new Date();
+            expiryDate.setDate(expiryDate.getDate() + 30);
+            document.getElementById('issueDate').value = today;
+            document.getElementById('expiryDate').value = expiryDate.toISOString().split('T')[0];
             
             const statusSelect = document.getElementById('newStatus');
-            if (btn.dataset.status === 'resolved') {
+            if (currentTicket.status === 'resolved') {
                 statusSelect.value = 'resolved';
                 statusSelect.disabled = true;
             } else {
@@ -378,11 +475,11 @@ $result = mysqli_query($conn, $query);
             }
             
             const attachmentDiv = document.getElementById('attachmentDiv');
-            if (btn.dataset.hasdoc === '1' && btn.dataset.docpath) {
+            if (currentTicket.hasdoc === '1' && currentTicket.docpath) {
                 attachmentDiv.style.display = 'block';
                 const link = document.getElementById('attachmentLink');
-                link.href = btn.dataset.docpath;
-                link.innerHTML = '<i class="fas fa-file"></i> ' + btn.dataset.docname;
+                link.href = currentTicket.docpath;
+                link.innerHTML = '<i class="fas fa-file"></i> ' + currentTicket.docname;
             } else {
                 attachmentDiv.style.display = 'none';
             }
@@ -393,7 +490,60 @@ $result = mysqli_query($conn, $query);
     function closeModalFunc() {
         modal.style.display = 'none';
         document.getElementById('responseMsg').value = '';
+        document.getElementById('ticketId').value = '';
     }
+
+    // Send Response Only (Standard POST form)
+    sendResponseBtn?.addEventListener('click', async function(e) {
+        e.preventDefault();
+        
+        const ticketId = document.getElementById('ticketId').value;
+        const responseMsg = document.getElementById('responseMsg').value;
+        const newStatus = document.getElementById('newStatus').value;
+        
+        if (!ticketId) {
+            alert('No ticket selected');
+            return;
+        }
+        
+        if (!responseMsg.trim()) {
+            alert('Please enter a response message');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('respond_query', '1');
+        formData.append('ticket_id', ticketId);
+        formData.append('response_message', responseMsg);
+        formData.append('new_status', newStatus);
+        
+        const btn = this;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Sending...';
+        btn.disabled = true;
+        
+        try {
+            const response = await fetch(window.location.pathname, {
+                method: 'POST',
+                body: formData
+            });
+            
+            const text = await response.text();
+            if (text.includes('successfully')) {
+                alert('Response sent successfully!');
+                closeModalFunc();
+                setTimeout(() => window.location.reload(), 1000);
+            } else {
+                alert('Error sending response');
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        } catch (error) {
+            alert('Network error: ' + error.message);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    });
 
     // Verify Payment Button
     document.getElementById('verifyPaymentBtn')?.addEventListener('click', async function(e) {
@@ -401,13 +551,30 @@ $result = mysqli_query($conn, $query);
         
         const ticketId = document.getElementById('ticketId').value;
         const ticketNo = document.getElementById('ticketNo').value;
+        const issueDate = document.getElementById('issueDate').value;
+        const expiryDate = document.getElementById('expiryDate').value;
         
         if (!ticketId) {
             alert('No ticket selected');
             return;
         }
         
-        if (!confirm(`Confirm payment verification for ticket ${ticketNo}? This will issue an exam badge to the student.`)) {
+        if (!issueDate) {
+            alert('Please select issue date');
+            return;
+        }
+        
+        if (!expiryDate) {
+            alert('Please select expiry date');
+            return;
+        }
+        
+        if (new Date(expiryDate) <= new Date(issueDate)) {
+            alert('Expiry date must be after issue date');
+            return;
+        }
+        
+        if (!confirm(`Confirm payment verification for ticket ${ticketNo}?\n\n📅 Issue Date: ${issueDate}\n⏰ Expiry Date: ${expiryDate}\n\n✅ System will automatically generate badge for student to download.`)) {
             return;
         }
         
@@ -417,16 +584,15 @@ $result = mysqli_query($conn, $query);
         verifyBtn.disabled = true;
         
         try {
-            const params = new URLSearchParams();
-            params.append('action', 'verify_payment');
-            params.append('ticket_id', ticketId);
+            const formData = new FormData();
+            formData.append('verify_payment', '1');
+            formData.append('ticket_id', ticketId);
+            formData.append('issue_date', issueDate);
+            formData.append('expiry_date', expiryDate);
             
             const response = await fetch(window.location.pathname, {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/x-www-form-urlencoded',
-                },
-                body: params.toString()
+                body: formData
             });
             
             const text = await response.text();
@@ -437,11 +603,11 @@ $result = mysqli_query($conn, $query);
                 result = JSON.parse(text);
             } catch (e) {
                 console.error('JSON parse error:', e);
-                throw new Error('Server returned invalid response');
+                throw new Error('Server returned invalid response: ' + text.substring(0, 100));
             }
             
             if (result.success) {
-                alert(`✅ Payment Verified Successfully!\n\nBadge Code: ${result.badge_code}\n\nStudent can now access exam.`);
+                alert(`✅ PAYMENT VERIFIED SUCCESSFULLY!\n\n📋 Badge Code: ${result.badge_code}\n📅 Issue Date: ${result.issue_date}\n⏰ Expiry Date: ${result.expiry_date}\n\n🎫 Student can now download their badge from 'My Queries' page.`);
                 closeModalFunc();
                 setTimeout(() => window.location.reload(), 1500);
             } else {
@@ -451,7 +617,7 @@ $result = mysqli_query($conn, $query);
             }
         } catch (error) {
             console.error('Fetch error:', error);
-            alert('Network error: ' + error.message + '\nPlease check console for details.');
+            alert('Network error: ' + error.message);
             verifyBtn.innerHTML = originalHtml;
             verifyBtn.disabled = false;
         }

@@ -36,16 +36,17 @@ if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
     if ($photo_result && mysqli_num_rows($photo_result) > 0) {
         $admin_data = mysqli_fetch_assoc($photo_result);
         $current_photo = $admin_data['profile_photo'] ?? null;
-        $_SESSION['profile_photo'] = $current_photo; // Store in session
+        $_SESSION['profile_photo'] = $current_photo;
     }
 }
 
-// ========== HANDLE ADD USER VIA AJAX ==========
+// ========== HANDLE ADD USER VIA AJAX (ADDED program) ==========
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_user') {
     $fullname = mysqli_real_escape_string($conn, trim($_POST['fullname']));
     $reg_no = mysqli_real_escape_string($conn, trim($_POST['reg_no']));
     $email = mysqli_real_escape_string($conn, trim($_POST['email']));
     $phone = mysqli_real_escape_string($conn, trim($_POST['phone']));
+    $program = mysqli_real_escape_string($conn, trim($_POST['program']));
     $role = mysqli_real_escape_string($conn, $_POST['role']);
     $password = password_hash('password123', PASSWORD_DEFAULT);
     
@@ -56,8 +57,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         exit();
     }
     
-    $insert = "INSERT INTO students (fullname, reg_no, email, phone, password, role, status) 
-               VALUES ('$fullname', '$reg_no', '$email', '$phone', '$password', '$role', 'active')";
+    // For staff roles, program is NULL
+    $program_value = ($role == 'student') ? "'$program'" : "NULL";
+    
+    $insert = "INSERT INTO students (fullname, reg_no, email, phone, program, password, role, status) 
+               VALUES ('$fullname', '$reg_no', '$email', '$phone', $program_value, '$password', '$role', 'active')";
     if (mysqli_query($conn, $insert)) {
         echo json_encode(['success' => true, 'message' => 'User added successfully! Default password: password123']);
     } else {
@@ -66,10 +70,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit();
 }
 
-// ========== HANDLE DELETE USER ==========
+// ========== HANDLE DELETE USER - FIXED: Super admin can delete anyone except super_admin ==========
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_user') {
     $user_id = (int)$_POST['user_id'];
-    $delete = "DELETE FROM students WHERE id = $user_id AND role = 'student'";
+    // Super admin can delete anyone except super_admin themselves
+    $delete = "DELETE FROM students WHERE id = $user_id AND role != 'super_admin'";
     if (mysqli_query($conn, $delete)) {
         echo json_encode(['success' => true]);
     } else {
@@ -78,7 +83,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit();
 }
 
-// ========== HANDLE TOGGLE STATUS ==========
+// ========== HANDLE TOGGLE STATUS - FIXED: Can toggle any user ==========
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_status') {
     $user_id = (int)$_POST['user_id'];
     $current_status = mysqli_real_escape_string($conn, $_POST['current_status']);
@@ -97,8 +102,8 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 15;
 $offset = ($page - 1) * $limit;
 
-// Get all users (students)
-$users_query = "SELECT id, fullname, reg_no, email, phone, role, status, created_at 
+// Get all users (students) - ADDED program column
+$users_query = "SELECT id, fullname, reg_no, email, phone, program, role, status, created_at 
                 FROM students 
                 ORDER BY created_at DESC 
                 LIMIT $limit OFFSET $offset";
@@ -140,7 +145,7 @@ $total_pages = ceil($total_users / $limit);
         .page-title { font-size: 1.6rem; color: #0a2b38; }
         .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; }
         .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2edf2; }
-        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
         table { width: 100%; border-collapse: collapse; }
         th, td { text-align: left; padding: 12px 8px; border-bottom: 1px solid #e9eef3; font-size: 0.85rem; }
         th { background: #f1f5f9; font-weight: 600; }
@@ -157,17 +162,20 @@ $total_pages = ceil($total_users / $limit);
         
         /* Modal Styles */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
-        .modal-content { background: white; border-radius: 20px; padding: 25px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
+        .modal-content { background: white; border-radius: 20px; padding: 25px; width: 90%; max-width: 550px; max-height: 85vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #e2edf2; }
         .close-modal { cursor: pointer; font-size: 1.5rem; color: #7f8c8d; }
         .close-modal:hover { color: #c0392b; }
         .form-group { margin-bottom: 15px; }
         .form-group label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.85rem; }
+        .form-group label .required { color: #e74c3c; }
         input, select { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #cbdbe6; outline: none; }
+        .program-field { display: block; }
         .toast { position: fixed; bottom: 20px; right: 20px; background: #1d6f42; color: white; padding: 12px 20px; border-radius: 12px; z-index: 1001; display: none; animation: slideIn 0.3s ease; }
         .toast.error { background: #c0392b; }
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @media (max-width: 768px) { .sidebar { width: 70px; } .sidebar span { display: none; } }
+        .badge-program { background: #e8f0f5; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; display: inline-block; }
     </style>
 </head>
 <body>
@@ -207,7 +215,7 @@ $total_pages = ceil($total_users / $limit);
 
         <div class="widget-card">
             <div class="flex-between">
-                <strong>📋 Registered Students</strong>
+                <strong>📋 Registered Users</strong>
                 <?php if ($is_super_admin): ?>
                     <button class="btn-primary" id="showAddUserBtn"><i class="fas fa-plus"></i> Add New User</button>
                 <?php endif; ?>
@@ -216,24 +224,43 @@ $total_pages = ceil($total_users / $limit);
             <div style="overflow-x: auto;">
                 <table id="usersTable">
                     <thead>
-                        <tr><th>ID</th><th>Full Name</th><th>Registration No</th><th>Email</th><th>Role</th><th>Status</th><th>Registered</th><th>Actions</th></thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Full Name</th>
+                            <th>Registration No</th>
+                            <th>Program/Course</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Registered</th>
+                            <th>Actions</th>
+                        </thead>
                     <tbody id="usersTableBody">
                         <?php while ($user = mysqli_fetch_assoc($users_result)): ?>
                         <tr data-id="<?php echo $user['id']; ?>">
                             <td><?php echo $user['id']; ?></td>
                             <td><?php echo htmlspecialchars($user['fullname']); ?></td>
                             <td><?php echo htmlspecialchars($user['reg_no']); ?></td>
+                            <td>
+                                <?php if ($user['role'] == 'student' && !empty($user['program'])): ?>
+                                    <span class="badge-program"><?php echo htmlspecialchars($user['program']); ?></span>
+                                <?php elseif ($user['role'] == 'student'): ?>
+                                    <span class="badge-program" style="background:#fef9e6;">Not set</span>
+                                <?php else: ?>
+                                    <span class="badge-program" style="background:#e3f2fd;">—</span>
+                                <?php endif; ?>
+                            </td>
                             <td><?php echo htmlspecialchars($user['email']); ?></td>
                             <td><?php echo ucfirst(htmlspecialchars($user['role'])); ?></td>
                             <td><span class="status-badge <?php echo $user['status'] == 'active' ? 'status-active' : 'status-inactive'; ?>"><?php echo ucfirst($user['status']); ?></span></td>
                             <td><?php echo date('d/m/Y', strtotime($user['created_at'])); ?></td>
                             <td>
-                                <?php if ($is_super_admin && $user['role'] == 'student'): ?>
+                                <?php if ($is_super_admin && $user['role'] != 'super_admin'): ?>
                                     <button class="btn-primary btn-sm toggle-status" data-id="<?php echo $user['id']; ?>" data-status="<?php echo $user['status']; ?>"><?php echo $user['status'] == 'active' ? 'Deactivate' : 'Activate'; ?></button>
                                     <button class="btn-danger btn-sm delete-user" data-id="<?php echo $user['id']; ?>">Delete</button>
                                 <?php endif; ?>
                             </td>
-                        </tr>
+                        <tr>
                         <?php endwhile; ?>
                     </tbody>
                 </table>
@@ -250,7 +277,7 @@ $total_pages = ceil($total_users / $limit);
     </main>
 </div>
 
-<!-- ADD USER MODAL (POPUP) -->
+<!-- ADD USER MODAL (POPUP) - ADDED program field -->
 <div id="addUserModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -259,15 +286,16 @@ $total_pages = ceil($total_users / $limit);
         </div>
         <form id="addUserForm">
             <div class="form-group">
-                <label>Full Name *</label>
+                <label>Full Name <span class="required">*</span></label>
                 <input type="text" name="fullname" id="fullname" required placeholder="e.g., John Doe">
             </div>
             <div class="form-group">
-                <label>Registration Number *</label>
-                <input type="text" name="reg_no" id="reg_no" required placeholder="e.g., BCS-01-0124-2023">
+                <label>Registration Number <span class="required">*</span></label>
+                <input type="text" name="reg_no" id="reg_no" required placeholder="e.g., IAA/2024/0789">
+                <small style="color:#7f8c8d;">This will be used as username for login</small>
             </div>
             <div class="form-group">
-                <label>Email *</label>
+                <label>Email <span class="required">*</span></label>
                 <input type="email" name="email" id="email" required placeholder="student@iaa.ac.tz">
             </div>
             <div class="form-group">
@@ -275,8 +303,8 @@ $total_pages = ceil($total_users / $limit);
                 <input type="text" name="phone" id="phone" placeholder="e.g., 0712345678">
             </div>
             <div class="form-group">
-                <label>Role</label>
-                <select name="role" id="role">
+                <label>Role <span class="required">*</span></label>
+                <select name="role" id="role" required>
                     <option value="student">Student</option>
                     <?php if ($is_super_admin): ?>
                     <option value="ict">ICT Staff</option>
@@ -285,6 +313,22 @@ $total_pages = ceil($total_users / $limit);
                     <?php endif; ?>
                 </select>
             </div>
+            
+            <!-- Program/Course Field - Only for students -->
+            <div class="form-group program-field" id="programField">
+                <label>Program / Course <span class="required" id="programRequired">*</span></label>
+                <select name="program" id="program">
+                    <option value="">-- Select Program --</option>
+                    <option value="BACHELOR IN COMPUTER SCIENCE">Bachelor in Computer Science</option>
+                    <option value="BACHELOR IN ACCOUNTANCY">Bachelor in Accountancy</option>
+                    <option value="BACHELOR IN BUSINESS ADMINISTRATION">Bachelor in Business Administration</option>
+                    <option value="BACHELOR IN INFORMATION TECHNOLOGY">Bachelor in Information Technology</option>
+                    <option value="DIPLOMA IN COMPUTER SCIENCE">Diploma in Computer Science</option>
+                    <option value="DIPLOMA IN ACCOUNTANCY">Diploma in Accountancy</option>
+                    <option value="CERTIFICATE IN ICT">Certificate in ICT</option>
+                </select>
+            </div>
+            
             <div class="form-group">
                 <label>Default Password</label>
                 <input type="text" value="password123" disabled style="background:#f1f5f9;">
@@ -309,6 +353,12 @@ $total_pages = ceil($total_users / $limit);
     const cancelBtn = document.getElementById('cancelModalBtn');
     const form = document.getElementById('addUserForm');
     const toast = document.getElementById('toast');
+    
+    // Program field elements
+    const roleSelect = document.getElementById('role');
+    const programField = document.getElementById('programField');
+    const programRequired = document.getElementById('programRequired');
+    const programSelect = document.getElementById('program');
 
     function showToast(message, isError = false) {
         toast.textContent = message;
@@ -317,11 +367,26 @@ $total_pages = ceil($total_users / $limit);
         setTimeout(() => { toast.style.display = 'none'; }, 3000);
     }
 
+    // Show/Hide program field based on role
+    function toggleProgramField() {
+        if (roleSelect.value === 'student') {
+            programField.style.display = 'block';
+            programRequired.style.display = 'inline';
+            programSelect.setAttribute('required', 'required');
+        } else {
+            programField.style.display = 'none';
+            programRequired.style.display = 'none';
+            programSelect.removeAttribute('required');
+            programSelect.value = '';
+        }
+    }
+
     // Show modal
     if (showBtn) {
         showBtn.addEventListener('click', () => {
             modal.style.display = 'flex';
             form.reset();
+            toggleProgramField();
         });
     }
 
@@ -333,9 +398,19 @@ $total_pages = ceil($total_users / $limit);
     if (cancelBtn) cancelBtn.addEventListener('click', closeModal);
     window.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
+    // Role change event
+    roleSelect.addEventListener('change', toggleProgramField);
+    toggleProgramField(); // Initialize
+
     // Submit form via AJAX
     form.addEventListener('submit', async (e) => {
         e.preventDefault();
+        
+        // Validate program for students
+        if (roleSelect.value === 'student' && !programSelect.value) {
+            showToast('Please select a program for student', true);
+            return;
+        }
         
         const formData = new FormData(form);
         formData.append('action', 'add_user');
@@ -359,10 +434,10 @@ $total_pages = ceil($total_users / $limit);
         }
     });
 
-    // Delete user
+    // Delete user - FIXED: Now works for ICT and Finance staff too
     document.querySelectorAll('.delete-user').forEach(btn => {
         btn.addEventListener('click', async () => {
-            if (!confirm('Delete this user permanently?')) return;
+            if (!confirm('Delete this user permanently? This action cannot be undone.')) return;
             
             const userId = btn.dataset.id;
             const formData = new FormData();
@@ -384,7 +459,7 @@ $total_pages = ceil($total_users / $limit);
         });
     });
 
-    // Toggle status
+    // Toggle status - FIXED: Now works for all users
     document.querySelectorAll('.toggle-status').forEach(btn => {
         btn.addEventListener('click', async () => {
             const userId = btn.dataset.id;
