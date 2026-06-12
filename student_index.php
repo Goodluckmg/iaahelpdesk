@@ -215,11 +215,11 @@ while ($row = mysqli_fetch_assoc($announcements_result)) {
                         <?php else: ?>
                             <?php while($ticket = mysqli_fetch_assoc($recent_result)): ?>
                             <tr>
-                                <td><?php echo htmlspecialchars($ticket['ticket_no']); ?>侧
-                                <td><?php echo htmlspecialchars(substr($ticket['title'], 0, 40)); ?>侧
-                                <td><?php echo isset($departments[$ticket['department_id']]) ? htmlspecialchars($departments[$ticket['department_id']]) : 'Unknown'; ?>侧
-                                <td><span class="status-badge <?php echo $ticket['status'] == 'resolved' ? 'status-resolved' : ''; ?>"><?php echo ucfirst(str_replace('_', ' ', $ticket['status'])); ?></span>侧
-                                <td><?php echo date('d/m/Y', strtotime($ticket['created_at'])); ?>侧
+                                <td><?php echo htmlspecialchars($ticket['ticket_no']); ?>
+                                <td><?php echo htmlspecialchars(substr($ticket['title'], 0, 40)); ?>
+                                <td><?php echo isset($departments[$ticket['department_id']]) ? htmlspecialchars($departments[$ticket['department_id']]) : 'Unknown'; ?>
+                                <td><span class="status-badge <?php echo $ticket['status'] == 'resolved' ? 'status-resolved' : ''; ?>"><?php echo ucfirst(str_replace('_', ' ', $ticket['status'])); ?></span>
+                                <td><?php echo date('d/m/Y', strtotime($ticket['created_at'])); ?>
                             </tr>
                             <?php endwhile; ?>
                         <?php endif; ?>
