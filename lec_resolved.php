@@ -1,96 +1,603 @@
+<?php
+session_start();
+require_once 'config/database.php';
+
+// Check if user is logged in and is exam officer
+if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['lecturer', 'academic', 'exam', 'exam_officer'])) {
+    header('Location: login.php');
+    exit();
+}
+
+// Get user info
+$user_id = $_SESSION['user_id'];
+$query = "SELECT * FROM students WHERE id = ?";
+$stmt = mysqli_prepare($conn, $query);
+mysqli_stmt_bind_param($stmt, "i", $user_id);
+mysqli_stmt_execute($stmt);
+$result = mysqli_stmt_get_result($stmt);
+$user = mysqli_fetch_assoc($result);
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>IAA Helpdesk | Resolved Requests</title>
+    <title>IAA Helpdesk | Resolved Appeals</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
-    <link rel="stylesheet" href="css/lecturers.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        .app-container {
+            display: flex;
+            height: 100vh;
+            background: #f5f7fa;
+        }
+
+        /* ========== SIDEBAR STYLES ========== */
+        .sidebar {
+            width: 280px;
+            background: linear-gradient(180deg, #0a2b38 0%, #0d3b4c 100%);
+            color: #e0edf5;
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+            position: fixed;
+            height: 100vh;
+            left: 0;
+            top: 0;
+            z-index: 100;
+        }
+
+        .profile-area {
+            padding: 25px 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #667eea, #764ba2);
+        }
+
+        .avatar i {
+            font-size: 40px;
+            color: white;
+        }
+
+        .welcome-text {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+
+        .user-name {
+            font-size: 1.2rem;
+            font-weight: 600;
+            margin: 5px 0;
+            color: white;
+        }
+
+        .user-role {
+            font-size: 0.7rem;
+            background: #667eea;
+            display: inline-block;
+            padding: 3px 12px;
+            border-radius: 20px;
+        }
+
+        .user-id {
+            font-size: 0.7rem;
+            margin-top: 8px;
+            color: #94a3b8;
+        }
+
+        .nav-menu {
+            flex: 1;
+            padding: 15px;
+        }
+
+        .nav-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px 15px;
+            border-radius: 12px;
+            color: #cbdbe6;
+            text-decoration: none;
+            margin-bottom: 5px;
+            transition: 0.2s;
+            cursor: pointer;
+        }
+
+        .nav-item:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        .nav-item.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .nav-item i {
+            width: 20px;
+        }
+
+        .logout-item {
+            margin-top: auto;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 15px;
+        }
+
+        /* ========== MAIN CONTENT ========== */
+        .main-content {
+            flex: 1;
+            padding: 20px 25px;
+            overflow-y: auto;
+            margin-left: 280px;
+        }
+
+        .top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 25px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .page-title {
+            font-size: 1.6rem;
+            color: #0a2b38;
+        }
+
+        .date-badge {
+            background: white;
+            padding: 8px 18px;
+            border-radius: 30px;
+            font-size: 0.8rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+
+        /* ========== WIDGET CARD ========== */
+        .widget-card {
+            background: white;
+            border-radius: 20px;
+            padding: 20px;
+            margin-bottom: 25px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+        }
+
+        .flex-between {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: #667eea;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: 0.2s;
+        }
+
+        .btn-primary:hover {
+            background: #5a67d8;
+            transform: translateY(-2px);
+        }
+
+        /* ========== TABLE STYLES ========== */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 1px solid #e2edf2;
+            font-size: 0.85rem;
+        }
+
+        th {
+            background: #f8fafc;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .status-badge {
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.7rem;
+            display: inline-block;
+            font-weight: 600;
+        }
+
+        .status-resolved {
+            background: #d9f0e5;
+            color: #1d6f42;
+        }
+
+        .status-approved {
+            background: #d9f0e5;
+            color: #1d6f42;
+        }
+
+        .status-rejected {
+            background: #fde8e8;
+            color: #c0392b;
+        }
+
+        /* ========== SEARCH ========== */
+        .search-box {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .search-box input {
+            flex: 1;
+            padding: 10px 15px;
+            border: 1px solid #ddd;
+            border-radius: 25px;
+            outline: none;
+        }
+
+        /* ========== MODAL STYLES ========== */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .modal-content {
+            background: white;
+            border-radius: 20px;
+            padding: 25px;
+            width: 90%;
+            max-width: 550px;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #e2edf2;
+        }
+
+        .close-modal {
+            cursor: pointer;
+            font-size: 1.5rem;
+            color: #7f8c8d;
+        }
+
+        .close-modal:hover {
+            color: #c0392b;
+        }
+
+        .form-group {
+            margin-bottom: 15px;
+        }
+
+        .form-group label {
+            font-weight: 600;
+            display: block;
+            margin-bottom: 5px;
+            font-size: 0.85rem;
+        }
+
+        input, textarea, select {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 12px;
+            border: 1px solid #cbdbe6;
+            outline: none;
+        }
+
+        .evidence-box {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 10px;
+            border: 1px dashed #667eea;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+            .sidebar span {
+                display: none;
+            }
+            .main-content {
+                margin-left: 70px;
+            }
+        }
+    </style>
 </head>
 <body>
 <div class="app-container">
+    <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="profile-area">
-            <div class="avatar"><i class="fas fa-chalkboard-user"></i></div>
+            <div class="avatar"><i class="fas fa-graduation-cap"></i></div>
             <div class="welcome-text">Welcome,</div>
-            <div class="user-name" id="lecturerName">Dr. Sarah Lecturer</div>
-            <div class="user-role">📚 Lecturer</div>
-            <div class="user-id" id="lecturerId">STAFF/2024/001</div>
+            <div class="user-name"><?php echo htmlspecialchars($user['fullname'] ?? 'Dr. Sarah Examinations'); ?></div>
+            <div class="user-role">📋 Examinations Officer</div>
+            <div class="user-id"><?php echo htmlspecialchars($user['reg_no'] ?? 'STAFF/EXAM/001'); ?></div>
         </div>
         <div class="nav-menu">
-            <a href="lecturers.php" class="nav-item" data-view="dashboard"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
-            <a href="lec_pending.php" class="nav-item" data-view="pending"><i class="fas fa-clock"></i><span class="nav-label">Pending Requests</span></a>
-            <a href="lec_resolved.php" class="nav-item active" data-view="resolved"><i class="fas fa-check-circle"></i><span class="nav-label">Resolved</span></a>
-            <a href="lec_courses.php" class="nav-item" data-view="courses"><i class="fas fa-book"></i><span class="nav-label">My Courses</span></a>
-             <a href="lec_reports.php" class="nav-item" data-view="reports"><i class="fas fa-chart-line"></i><span class="nav-label">Reports</span></a>
-            <div class="logout-item"><a href="../login.html" class="nav-item"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
+            <a href="lecturers.php" class="nav-item">
+                <i class="fas fa-chart-pie"></i><span>Dashboard</span>
+            </a>
+            <a href="lec_pending.php" class="nav-item">
+                <i class="fas fa-clock"></i><span>Student query</span>
+            </a>
+            <a href="lec_resolved.php" class="nav-item active">
+                <i class="fas fa-check-circle"></i><span>Resolved</span>
+            </a>
+            <a href="lec_timetable.php" class="nav-item">
+                <i class="fas fa-calendar-alt"></i><span>Exam Timetable</span>
+            </a>
+            <div class="logout-item">
+                <a href="logout.php" class="nav-item" id="logoutBtn">
+                    <i class="fas fa-sign-out-alt"></i><span>Logout</span>
+                </a>
+            </div>
         </div>
     </aside>
 
+    <!-- MAIN CONTENT -->
     <main class="main-content">
         <div class="top-bar">
-            <h1 class="page-title">Resolved Requests</h1>
+            <h1 class="page-title">Resolved Appeals</h1>
             <div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
         </div>
 
-        <div class="stats-row">
-            <div class="stat-card"><i class="fas fa-check-circle"></i><div class="stat-number" id="resolvedCount">0</div><div>Total Resolved</div></div>
-            <div class="stat-card"><i class="fas fa-star"></i><div class="stat-number" id="satisfactionRate">0%</div><div>Satisfaction Rate</div></div>
+        <!-- SEARCH -->
+        <div class="widget-card">
+            <div class="search-box">
+                <input type="text" id="searchInput" placeholder="🔍 Search by student name, reg no...">
+                <button class="btn-primary" id="searchBtn"><i class="fas fa-search"></i> Search</button>
+                <button class="btn-primary" id="refreshBtn" style="background:#27ae60;"><i class="fas fa-sync-alt"></i> Refresh</button>
+            </div>
         </div>
 
+        <!-- RESOLVED APPEALS TABLE -->
         <div class="widget-card">
             <div class="flex-between">
-                <strong>✅ Resolved Student Requests</strong>
-                <button class="btn-primary" id="refreshBtn"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <strong>✅ Resolved & Closed Appeals</strong>
+                <span id="resultCount" style="color:#666; font-size:0.8rem;">0 records</span>
             </div>
-            <div id="resolvedList"></div>
+            <div style="overflow-x: auto;">
+                <table id="appealsTable">
+                    <thead>
+                        <tr><th>ID</th><th>Student Name</th><th>Reg No</th><th>Course</th><th>Type</th><th>Original</th><th>Final Grade</th><th>Outcome</th><th>Status</th><th>Action</th></tr>
+                    </thead>
+                    <tbody id="appealsBody">
+                        <tr><td colspan="10" style="text-align:center;">Loading...</td></tr>
+                    </tbody>
+                </table>
+            </div>
         </div>
     </main>
 </div>
 
-<script src="lecturer.js"></script>
+<!-- MODAL FOR VIEWING RESOLVED APPEAL DETAILS -->
+<div id="viewModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3><i class="fas fa-check-circle"></i> Resolved Appeal Details</h3>
+            <span class="close-modal">&times;</span>
+        </div>
+        <div class="form-group">
+            <label>Appeal ID: <span id="requestIdDisplay"></span></label>
+        </div>
+        <div class="form-group">
+            <label>Student Name:</label>
+            <input type="text" id="studentNameDisplay" readonly style="background:#f5f5f5;">
+        </div>
+        <div class="form-group">
+            <label>Course:</label>
+            <input type="text" id="courseDisplay" readonly style="background:#f5f5f5;">
+        </div>
+        <div class="form-group">
+            <label>Appeal Type:</label>
+            <input type="text" id="typeDisplay" readonly style="background:#f5f5f5;">
+        </div>
+        <div class="form-group">
+            <label>Original Grade:</label>
+            <input type="text" id="originalGradeDisplay" readonly style="background:#f5f5f5;">
+        </div>
+        <div class="form-group">
+            <label>Final Grade After Decision:</label>
+            <input type="text" id="finalGradeDisplay" readonly style="background:#f5f5f5;">
+        </div>
+        <div class="form-group">
+            <label>Student's Reason:</label>
+            <textarea id="studentReasonDisplay" rows="2" readonly style="background:#f5f5f5;"></textarea>
+        </div>
+        <div class="form-group" id="evidenceDiv" style="display:none;">
+            <label>Evidence:</label>
+            <div id="evidenceDisplay" class="evidence-box"></div>
+        </div>
+        <div class="form-group">
+            <label>Officer's Response:</label>
+            <textarea id="responseDisplay" rows="3" readonly style="background:#f5f5f5;"></textarea>
+        </div>
+        <div class="form-group">
+            <label>Final Status:</label>
+            <input type="text" id="statusDisplay" readonly style="background:#f5f5f5;">
+        </div>
+        <div style="display:flex; gap:10px; justify-content:flex-end;">
+            <button type="button" class="btn-primary" id="closeModalBtn" style="background:#7f8c8d;">Close</button>
+        </div>
+    </div>
+</div>
+
 <script>
-    let requests = [];
+    let currentSearch = "";
 
     function loadData() {
-        requests = loadRequests();
-        updateStats();
-        renderResolvedList();
+        loadResolvedAppeals();
+        setCurrentDate();
     }
 
-    function updateStats() {
-        const resolved = requests.filter(r => r.status === 'Resolved').length;
-        const total = requests.length;
-        const satisfaction = total === 0 ? 0 : Math.round((resolved / total) * 100);
-        document.getElementById('resolvedCount').innerText = resolved;
-        document.getElementById('satisfactionRate').innerText = satisfaction + '%';
-    }
-
-    function renderResolvedList() {
-        const resolved = requests.filter(r => r.status === 'Resolved');
-        const container = document.getElementById('resolvedList');
+    function loadResolvedAppeals() {
+        let url = 'get_appeals.php?action=resolved&search=' + encodeURIComponent(currentSearch);
         
-        if (resolved.length === 0) {
-            container.innerHTML = '<div class="widget-card" style="text-align:center;">📭 No resolved requests yet. Start responding to pending requests.</div>';
-            return;
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                const tbody = document.getElementById('appealsBody');
+                document.getElementById('resultCount').innerText = `${data.length} records`;
+                
+                if (data.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="10" style="text-align:center;">No resolved appeals found</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.map(a => `
+                    <tr>
+                        <td>#${a.id}</td>
+                        <td>${escapeHtml(a.student_name)}</td>
+                        <td>${escapeHtml(a.reg_no)}</td>
+                        <td>${escapeHtml(a.course.substring(0, 30))}${a.course.length > 30 ? '...' : ''}</td>
+                        <td>${escapeHtml(a.appeal_type)}</td>
+                        <td><strong>${escapeHtml(a.current_grade || 'N/A')}</strong></td>
+                        <td>${escapeHtml(a.new_grade || a.expected_grade || 'N/A')}</td>
+                        <td><span class="status-badge ${getOutcomeClass(a.status)}">${getOutcomeText(a.status)}</span></td>
+                        <td><span class="status-badge ${getStatusClass(a.status)}">${escapeHtml(a.status)}</span></td>
+                        <td><button class="btn-primary view-btn" data-id="${a.id}" style="padding:4px 12px;"><i class="fas fa-eye"></i> View</button></td>
+                    </tr>
+                `).join('');
+                
+                document.querySelectorAll('.view-btn').forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        const id = btn.dataset.id;
+                        loadAppealDetails(id);
+                    });
+                });
+            })
+            .catch(error => console.error('Error loading resolved appeals:', error));
+    }
+
+    function loadAppealDetails(id) {
+        fetch('get_appeals.php?action=details&id=' + id)
+            .then(response => response.json())
+            .then(a => {
+                document.getElementById('requestIdDisplay').innerText = id;
+                document.getElementById('studentNameDisplay').value = a.student_name;
+                document.getElementById('courseDisplay').value = a.course;
+                document.getElementById('typeDisplay').value = a.appeal_type;
+                document.getElementById('originalGradeDisplay').value = a.current_grade || 'N/A';
+                document.getElementById('finalGradeDisplay').value = a.new_grade || a.expected_grade || 'N/A';
+                document.getElementById('studentReasonDisplay').value = a.reason;
+                document.getElementById('evidenceDiv').style.display = a.evidence_file ? 'block' : 'none';
+                if (a.evidence_file) {
+                    document.getElementById('evidenceDisplay').innerHTML = `<i class="fas fa-image"></i> ${a.evidence_file}`;
+                }
+                document.getElementById('responseDisplay').value = a.staff_response || 'No response recorded';
+                document.getElementById('statusDisplay').value = a.status;
+                document.getElementById('viewModal').style.display = 'flex';
+            })
+            .catch(error => console.error('Error loading appeal details:', error));
+    }
+
+    function getOutcomeClass(status) {
+        if (status === 'Approved') return 'status-approved';
+        if (status === 'Rejected') return 'status-rejected';
+        return 'status-resolved';
+    }
+
+    function getOutcomeText(status) {
+        if (status === 'Approved') return 'Approved - Grade Changed';
+        if (status === 'Rejected') return 'Rejected - No Change';
+        return 'Resolved';
+    }
+
+    function getStatusClass(status) {
+        if (status === "Resolved") return "status-resolved";
+        if (status === "Approved") return "status-approved";
+        return "status-rejected";
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        return str.replace(/[&<>]/g, function(m) {
+            if (m === '&') return '&amp;';
+            if (m === '<') return '&lt;';
+            if (m === '>') return '&gt;';
+            return m;
+        });
+    }
+
+    function setCurrentDate() {
+        const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
+        document.getElementById('currentDate').innerText = new Date().toLocaleDateString('en-US', options);
+    }
+
+    // Search
+    document.getElementById('searchBtn').addEventListener('click', () => {
+        currentSearch = document.getElementById('searchInput').value;
+        loadResolvedAppeals();
+    });
+
+    document.getElementById('searchInput').addEventListener('keypress', (e) => {
+        if (e.key === 'Enter') {
+            currentSearch = e.target.value;
+            loadResolvedAppeals();
         }
-        
-        container.innerHTML = resolved.map(r => `
-            <div class="request-item" style="border-left-color: #1d6f42;">
-                <div class="request-title">#${r.id} - ${r.subject}</div>
-                <div class="request-meta">
-                    <i class="fas fa-user"></i> ${r.studentName} (${r.studentReg}) | 
-                    <i class="fas fa-book"></i> ${r.course} | 
-                    <i class="fas fa-calendar"></i> ${r.date} |
-                    <span class="status-badge status-resolved">Resolved</span>
-                </div>
-                <div class="request-description"><strong>Description:</strong> ${r.description}</div>
-                ${r.response ? `<div class="request-description" style="background:#d9f0e5; padding:10px; border-radius:10px; margin-top:10px;"><strong>📝 Your Response:</strong> ${r.response}<br><small>Responded on: ${r.responseDate || r.date}</small></div>` : ''}
-            </div>
-        `).join('');
-    }
+    });
 
-    document.getElementById('refreshBtn').addEventListener('click', loadData);
+    document.getElementById('refreshBtn').addEventListener('click', () => {
+        currentSearch = "";
+        document.getElementById('searchInput').value = "";
+        loadResolvedAppeals();
+    });
+
+    // Logout
+    document.getElementById('logoutBtn').addEventListener('click', (e) => {
+        e.preventDefault();
+        if (confirm('Are you sure you want to logout?')) {
+            window.location.href = 'logout.php';
+        }
+    });
+
+    // Modal close
+    document.querySelectorAll('.close-modal, #closeModalBtn').forEach(el => {
+        el.addEventListener('click', () => {
+            document.getElementById('viewModal').style.display = 'none';
+        });
+    });
+
     loadData();
 </script>
 </body>

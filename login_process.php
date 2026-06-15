@@ -39,7 +39,7 @@ function redirectToDashboard($role, $user_id, $fullname, $username) {
         case 'academic':
             $_SESSION['staff_id'] = $user_id;
             $_SESSION['staff_no'] = $username;
-            header("Location: academic_dashboard.php");
+            header("Location: lecturers.php");
             break;
         case 'ict':
             $_SESSION['staff_id'] = $user_id;

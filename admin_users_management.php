@@ -310,6 +310,7 @@ $total_pages = ceil($total_users / $limit);
                     <option value="ict">ICT Staff</option>
                     <option value="finance">Finance Staff</option>
                     <option value="admin">Admin</option>
+                    <option value="lecturer">Exam officer</option>
                     <?php endif; ?>
                 </select>
             </div>
