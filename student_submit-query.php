@@ -223,7 +223,7 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['submit_query'])) {
         .document-file-label { background: #2c7da0; color: white; padding: 8px 16px; border-radius: 30px; font-size: 0.75rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
         .document-file-label:hover { background: #1f5a7a; }
         .selected-file-name { font-size: 0.7rem; color: #2c7da0; }
-        .remove-file-btn { background: #2c7da0; color: white; border: none; padding: 5px 12px; border-radius: 20px; font-size: 0.65rem; cursor: pointer; }
+        .remove-file-btn { background: #d12020; color: white; border: none; padding: 5px 12px; border-radius: 20px; font-size: 0.65rem; cursor: pointer; }
         .remove-file-btn:hover { background: #1f5a7a; }
         .document-note { font-size:0.7rem; color:#7f8c8d; margin-top:10px; }
         

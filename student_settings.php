@@ -204,7 +204,7 @@ if (isset($_GET['clear_data'])) {
         
         /* ========== CLEAR DATA BUTTON - COLOR #2c7da0 ========== */
         .btn-danger {
-            background: #2c7da0;
+            background: #c02a43;
             border: none;
             padding: 8px 20px;
             border-radius: 25px;
