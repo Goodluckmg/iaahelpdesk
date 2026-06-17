@@ -130,33 +130,131 @@ function getAllReplies($conn, $ticket_id) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .toast-notification { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; z-index: 9999; animation: slideIn 0.3s ease; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
-        .toast-success { background: #27ae60; }
-        .toast-error { background: #e74c3c; }
-        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
-        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
-        .document-viewer-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; }
-        .document-viewer-content { max-width: 90%; max-height: 90%; background: white; border-radius: 16px; padding: 20px; position: relative; }
-        .close-doc-viewer { position: absolute; top: 10px; right: 20px; background: #e74c3c; color: white; border: none; padding: 5px 15px; border-radius: 20px; cursor: pointer; }
-        .doc-image { max-width: 100%; max-height: 80vh; }
-        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #3498db; border-radius: 50%; animation: spin 1s linear infinite; }
-        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .avatar { width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; overflow: hidden; background: linear-gradient(135deg, #2c7da0, #1f5068); }
-        .avatar img { width: 100%; height: 100%; object-fit: cover; }
-        .avatar i { font-size: 35px; color: white; }
-        .reply-section { margin-top: 15px; padding: 12px; background: #f8fafc; border-radius: 12px; border-left: 3px solid #2c7da0; }
-        .reply-item { padding: 10px; margin-bottom: 10px; background: white; border-radius: 10px; border: 1px solid #e2edf2; }
-        .reply-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.75rem; color: #64748b; }
-        .reply-message { font-size: 0.85rem; color: #334155; line-height: 1.5; }
-        .reply-you { border-left-color: #27ae60; }
-        .reply-staff { border-left-color: #e74c3c; }
-        .toggle-replies { background: none; border: none; color: #2c7da0; cursor: pointer; font-size: 0.75rem; margin-top: 8px; }
-        .replies-container { display: none; margin-top: 12px; }
-        .replies-container.show { display: block; }
+        /* ========== BASE STYLES ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .app-container { display: flex; height: 100vh; background: #f5f7fa; }
         
-        /* Button styles - for PDF badge */
+        /* ========== SIDEBAR - STATIC ========== */
+        .sidebar { 
+            width: 280px; 
+            background: #0a2b38; /* RANGI MOJA - HAKUNA GRADIENT */
+            color: #e0edf5; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto; 
+            position: fixed; 
+            height: 100vh; 
+            left: 0; 
+            top: 0; 
+            z-index: 100;
+        }
+        .profile-area { 
+            padding: 25px 20px; 
+            text-align: center; 
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .avatar {
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            background: #2c7da0; /* RANGI MOJA - HAKUNA GRADIENT */
+        }
+        .avatar img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .avatar i {
+            font-size: 35px;
+            color: white;
+        }
+        
+        .welcome-text { font-size: 0.85rem; color: #94a3b8; }
+        .student-name { font-size: 1.1rem; font-weight: 600; margin: 5px 0; color: white; }
+        .student-id { font-size: 0.7rem; margin-top: 8px; color: #94a3b8; }
+        .student-id i { margin-right: 5px; }
+        
+        .nav-menu { flex: 1; padding: 15px; }
+        .nav-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 15px; 
+            border-radius: 12px; 
+            color: #cbdbe6; 
+            text-decoration: none; 
+            margin-bottom: 5px; 
+            cursor: pointer; 
+        }
+        /* HAKUNA HOVER EFFECTS - zimeondolewa */
+        .nav-item.active { 
+            background: #2c7da0; 
+            color: white; 
+        }
+        .nav-item.active i { color: white; }
+        .nav-item i { width: 20px; color: #cbdbe6; }
+        .nav-item.active i { color: white; }
+        .nav-label { font-size: 0.9rem; }
+        .logout-item { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        
+        /* ========== MAIN CONTENT ========== */
+        .main-content { flex: 1; padding: 20px 25px; overflow-y: auto; margin-left: 280px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .page-title { font-size: 1.6rem; color: #0a2b38; }
+        .date-badge { background: white; padding: 8px 18px; border-radius: 30px; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        /* ========== WIDGET CARDS ========== */
+        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        
+        /* ========== STATUS BADGE ========== */
+        .status-badge { padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; display: inline-block; font-weight: 600; }
+        .status-resolved { background: #d9f0e5; color: #1d6f42; }
+        .status-open { background: #fde8e8; color: #c0392b; }
+        
+        /* ========== BUTTONS - COLOR #2c7da0 ========== */
+        .btn-primary {
+            background: #2c7da0;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary:hover {
+            background: #1f5a7a;
+            color: white;
+            text-decoration: none;
+        }
+        .btn-primary i { margin-right: 6px; }
+        
+        /* ========== RESOLVE BUTTON - COLOR #2c7da0 ========== */
+        .resolve-btn {
+            background: #2c7da0;
+            border: none;
+            color: white;
+            padding: 5px 14px;
+            border-radius: 30px;
+            margin-top: 8px;
+            cursor: pointer;
+            font-size: 0.75rem;
+        }
+        .resolve-btn:hover {
+            background: #1f5a7a;
+        }
+        
+        /* ========== PDF BADGE BUTTON - COLOR #2c7da0 ========== */
         .btn-pdf-badge {
-            background: #27ae60;
+            background: #2c7da0;
             border: none;
             padding: 5px 12px;
             border-radius: 20px;
@@ -168,12 +266,81 @@ function getAllReplies($conn, $ticket_id) {
             align-items: center;
             gap: 5px;
             font-size: 0.7rem;
-            transition: 0.2s;
             margin-top: 8px;
         }
         .btn-pdf-badge:hover {
-            background: #1e8449;
-            transform: scale(1.02);
+            background: #1f5a7a;
+        }
+        
+        /* ========== TICKET ITEMS ========== */
+        .ticket-item {
+            background: #f8fafc;
+            border-radius: 12px;
+            padding: 15px;
+            margin-bottom: 12px;
+            border-left: 3px solid #2c7da0;
+        }
+        
+        /* ========== REPLY SECTION ========== */
+        .reply-section { margin-top: 15px; padding: 12px; background: #f8fafc; border-radius: 12px; border-left: 3px solid #2c7da0; }
+        .reply-item { padding: 10px; margin-bottom: 10px; background: white; border-radius: 10px; border: 1px solid #e2edf2; }
+        .reply-header { display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.75rem; color: #64748b; }
+        .reply-message { font-size: 0.85rem; color: #334155; line-height: 1.5; }
+        .reply-you { border-left-color: #2c7da0; }
+        .reply-staff { border-left-color: #2c7da0; }
+        .toggle-replies { background: none; border: none; color: #2c7da0; cursor: pointer; font-size: 0.75rem; margin-top: 8px; }
+        .replies-container { display: none; margin-top: 12px; }
+        .replies-container.show { display: block; }
+        
+        /* ========== RATING STARS ========== */
+        .rating-star {
+            cursor: pointer;
+            font-size: 1.2rem;
+            color: #e2e8f0;
+            transition: color 0.2s;
+        }
+        .rating-star:hover,
+        .rating-star.active {
+            color: #f5b042;
+        }
+        
+        /* ========== TOAST NOTIFICATION ========== */
+        .toast-notification { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; z-index: 9999; animation: slideIn 0.3s ease; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .toast-success { background: #2c7da0; }
+        .toast-error { background: #e74c3c; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        
+        /* ========== DOCUMENT VIEWER ========== */
+        .document-viewer-modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 10000; align-items: center; justify-content: center; }
+        .document-viewer-content { max-width: 90%; max-height: 90%; background: white; border-radius: 16px; padding: 20px; position: relative; }
+        .close-doc-viewer { position: absolute; top: 10px; right: 20px; background: #2c7da0; color: white; border: none; padding: 5px 15px; border-radius: 20px; cursor: pointer; }
+        .close-doc-viewer:hover { background: #1f5a7a; }
+        .doc-image { max-width: 100%; max-height: 80vh; }
+        .loading-spinner { display: inline-block; width: 20px; height: 20px; border: 2px solid #f3f3f3; border-top: 2px solid #2c7da0; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* ========== VIEW DOC BUTTON ========== */
+        .view-doc-btn {
+            background: #2c7da0;
+            color: white;
+            border: none;
+            padding: 3px 12px;
+            border-radius: 15px;
+            margin-left: 10px;
+            cursor: pointer;
+            font-size: 0.7rem;
+        }
+        .view-doc-btn:hover {
+            background: #1f5a7a;
+        }
+        
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            .sidebar { width: 70px; }
+            .sidebar .nav-label { display: none; }
+            .sidebar .welcome-text, .sidebar .student-name, .sidebar .student-id { display: none; }
+            .main-content { margin-left: 70px; padding: 15px; }
         }
     </style>
 </head>
@@ -193,15 +360,15 @@ function getAllReplies($conn, $ticket_id) {
             <div class="student-id"><i class="fas fa-id-card"></i> <?php echo htmlspecialchars($reg_no); ?></div>
         </div>
         <div class="nav-menu">
-            <a href="student_index.php" class="nav-item"><i class="fas fa-chart-pie"></i><span>Dashboard</span></a>
-            <a href="student_submit-query.php" class="nav-item"><i class="fas fa-plus-circle"></i><span>Submit Query</span></a>
-            <a href="student_my-queries.php" class="nav-item active"><i class="fas fa-ticket-alt"></i><span>My Queries</span></a>
-            <a href="student_knowledge-base.php" class="nav-item"><i class="fas fa-graduation-cap"></i><span>Knowledge Base</span></a>
-            <a href="student_feedback.php" class="nav-item"><i class="fas fa-star"></i><span>Feedback</span></a>
-            <a href="student_edit-photo.php" class="nav-item"><i class="fas fa-camera"></i><span>Edit Photo</span></a>
-            <a href="student_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span>Startup Hub</span></a>
-            <a href="student_settings.php" class="nav-item"><i class="fas fa-cog"></i><span>Settings</span></a>
-            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></div>
+            <a href="student_index.php" class="nav-item"><i class="fas fa-chart-pie"></i><span class="nav-label">Dashboard</span></a>
+            <a href="student_submit-query.php" class="nav-item"><i class="fas fa-plus-circle"></i><span class="nav-label">Submit Query</span></a>
+            <a href="student_my-queries.php" class="nav-item active"><i class="fas fa-ticket-alt"></i><span class="nav-label">My Queries</span></a>
+            <a href="student_knowledge-base.php" class="nav-item"><i class="fas fa-graduation-cap"></i><span class="nav-label">Knowledge Base</span></a>
+            <a href="student_feedback.php" class="nav-item"><i class="fas fa-star"></i><span class="nav-label">Feedback</span></a>
+            <a href="student_edit-photo.php" class="nav-item"><i class="fas fa-camera"></i><span class="nav-label">Edit Photo</span></a>
+            <a href="student_startup.php" class="nav-item"><i class="fas fa-rocket"></i><span class="nav-label">Startup Hub</span></a>
+            <a href="student_settings.php" class="nav-item"><i class="fas fa-cog"></i><span class="nav-label">Settings</span></a>
+            <div class="logout-item"><a href="logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span class="nav-label">Logout</span></a></div>
         </div>
     </aside>
 
@@ -219,7 +386,7 @@ function getAllReplies($conn, $ticket_id) {
                 <?php if(mysqli_num_rows($tickets_result) == 0): ?>
                     <div class="ticket-item" style="text-align:center;">
                         <i class="fas fa-inbox" style="font-size: 48px; color: #cbd5e1; margin-bottom: 10px; display: block;"></i>
-                        No submitted queries yet. <a href="student_submit-query.php">Submit your first query</a>
+                        No submitted queries yet. <a href="student_submit-query.php" style="color: #2c7da0;">Submit your first query</a>
                     </div>
                 <?php else: ?>
                     <?php while($ticket = mysqli_fetch_assoc($tickets_result)): 
@@ -245,7 +412,7 @@ function getAllReplies($conn, $ticket_id) {
                             <?php if($ticket['has_document'] && $ticket['document_path']): ?>
                                 <div style="margin-top:10px; padding:8px; background:#e8f0f5; border-radius:10px;">
                                     <i class="fas fa-paperclip"></i> Attached: <?php echo htmlspecialchars($ticket['document_name']); ?>
-                                    <button class="view-doc-btn" data-doc-path="<?php echo htmlspecialchars($ticket['document_path']); ?>" data-doc-name="<?php echo htmlspecialchars($ticket['document_name']); ?>" style="background:#2c7da0; color:white; border:none; padding:3px 12px; border-radius:15px; margin-left:10px; cursor:pointer;">
+                                    <button class="view-doc-btn" data-doc-path="<?php echo htmlspecialchars($ticket['document_path']); ?>" data-doc-name="<?php echo htmlspecialchars($ticket['document_name']); ?>">
                                         <i class="fas fa-eye"></i> View
                                     </button>
                                 </div>
@@ -273,7 +440,7 @@ function getAllReplies($conn, $ticket_id) {
                                                 </div>
                                                 <div class="reply-message"><?php echo nl2br(htmlspecialchars($reply['message'])); ?></div>
                                                 
-                                                <!-- ========== PDF BADGE BUTTON - Appears ONLY in Finance Officer's reply ========== -->
+                                                <!-- ========== PDF BADGE BUTTON - RANGI #2c7da0 ========== -->
                                                 <?php if($is_finance_officer && $has_badge): ?>
                                                     <div style="margin-top: 10px;">
                                                         <a href="generate_badge.php?badge=<?php echo urlencode($ticket['badge_code']); ?>" 
@@ -296,8 +463,9 @@ function getAllReplies($conn, $ticket_id) {
                                 <?php endif; ?>
                             <?php endif; ?>
                             
+                            <!-- ========== MARK AS RESOLVED BUTTON - RANGI #2c7da0 ========== -->
                             <?php if($ticket['status'] != 'resolved'): ?>
-                                <button class="resolve-btn" data-id="<?php echo $ticket['id']; ?>" style="background:#1a6e4b; border:none; color:white; padding:5px 14px; border-radius:30px; margin-top:8px; cursor:pointer;">
+                                <button class="resolve-btn" data-id="<?php echo $ticket['id']; ?>">
                                     <i class="fas fa-check"></i> Mark as Resolved
                                 </button>
                             <?php else: ?>
@@ -306,11 +474,11 @@ function getAllReplies($conn, $ticket_id) {
                                 <?php else: ?>
                                     <div class="rating-container" data-id="<?php echo $ticket['id']; ?>" style="margin-top:8px;">
                                         <span style="font-size:0.8rem;">⭐ Rate resolution:</span>
-                                        <span class="star" data-rate="1" style="cursor:pointer; font-size:1.2rem;">★</span>
-                                        <span class="star" data-rate="2" style="cursor:pointer; font-size:1.2rem;">★</span>
-                                        <span class="star" data-rate="3" style="cursor:pointer; font-size:1.2rem;">★</span>
-                                        <span class="star" data-rate="4" style="cursor:pointer; font-size:1.2rem;">★</span>
-                                        <span class="star" data-rate="5" style="cursor:pointer; font-size:1.2rem;">★</span>
+                                        <span class="rating-star" data-rate="1" style="cursor:pointer; font-size:1.2rem;">★</span>
+                                        <span class="rating-star" data-rate="2" style="cursor:pointer; font-size:1.2rem;">★</span>
+                                        <span class="rating-star" data-rate="3" style="cursor:pointer; font-size:1.2rem;">★</span>
+                                        <span class="rating-star" data-rate="4" style="cursor:pointer; font-size:1.2rem;">★</span>
+                                        <span class="rating-star" data-rate="5" style="cursor:pointer; font-size:1.2rem;">★</span>
                                     </div>
                                 <?php endif; ?>
                             <?php endif; ?>
@@ -361,7 +529,7 @@ function getAllReplies($conn, $ticket_id) {
         });
     });
 
-    // Resolve ticket
+    // Resolve ticket - BUTTON RANGI #2c7da0
     document.querySelectorAll('.resolve-btn').forEach(btn => {
         btn.addEventListener('click', async function() {
             const ticketId = this.dataset.id;
@@ -384,7 +552,7 @@ function getAllReplies($conn, $ticket_id) {
     // Rating functionality
     document.querySelectorAll('.rating-container').forEach(container => {
         const ticketId = container.dataset.id;
-        container.querySelectorAll('.star').forEach(star => {
+        container.querySelectorAll('.rating-star').forEach(star => {
             star.addEventListener('click', async function() {
                 const rating = this.dataset.rate;
                 try {
@@ -427,6 +595,13 @@ function getAllReplies($conn, $ticket_id) {
     });
     docModal.addEventListener('click', function(e) { if (e.target === docModal) closeDocViewer(); });
     document.getElementById('refreshBtn')?.addEventListener('click', () => { window.location.reload(); });
+    
+    // Logout confirmation
+    document.getElementById('logoutBtn')?.addEventListener('click', function(e) {
+        if (!confirm('Are you sure you want to logout?')) {
+            e.preventDefault();
+        }
+    });
 </script>
 </body>
 </html>

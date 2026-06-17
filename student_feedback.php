@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit();
 }
 
-// Handle general feedback submission (FIXED - removed department_id)
+// Handle general feedback submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
     $feedback_text = mysqli_real_escape_string($conn, $_POST['general_feedback']);
     
@@ -113,64 +113,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        .toast-notification {
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            padding: 12px 20px;
-            border-radius: 8px;
-            color: white;
-            z-index: 9999;
-            animation: slideIn 0.3s ease;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
-        }
-        .toast-success { background: #27ae60; }
-        .toast-error { background: #e74c3c; }
-        @keyframes slideIn {
-            from { transform: translateX(100%); opacity: 0; }
-            to { transform: translateX(0); opacity: 1; }
-        }
-        @keyframes slideOut {
-            from { transform: translateX(0); opacity: 1; }
-            to { transform: translateX(100%); opacity: 0; }
-        }
-        .rating-star {
-            cursor: pointer;
-            font-size: 1.5rem;
-            color: #e2e8f0;
-            transition: color 0.2s;
-        }
-        .rating-star:hover,
-        .rating-star.active {
-            color: #f5b042;
-        }
-        .message { padding: 10px 14px; border-radius: 12px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
-        .message.show { display: flex; }
-        .message-success { background: #d9f0e5; color: #1d6f42; }
-        .message-error { background: #fde8e8; color: #c0392b; }
+        /* ========== BASE STYLES ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .app-container { display: flex; height: 100vh; background: #f5f7fa; }
         
-        .ticket-card {
-            background: #f9fdfe;
-            border-left: 3px solid #f39c12;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 15px;
+        /* ========== SIDEBAR - STATIC ========== */
+        .sidebar { 
+            width: 280px; 
+            background: #0a2b38; /* RANGI MOJA - HAKUNA GRADIENT */
+            color: #e0edf5; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto; 
+            position: fixed; 
+            height: 100vh; 
+            left: 0; 
+            top: 0; 
+            z-index: 100;
         }
-        .response-box {
-            background: #e8f0f5;
-            border-radius: 10px;
-            padding: 12px;
-            margin: 10px 0;
-            border-left: 3px solid #27ae60;
+        .profile-area { 
+            padding: 25px 20px; 
+            text-align: center; 
+            border-bottom: 1px solid rgba(255,255,255,0.1);
         }
-        .rating-box {
-            margin-top: 10px;
-            padding-top: 10px;
-            border-top: 1px solid #e2edf2;
-        }
+        
         .avatar {
             width: 70px;
             height: 70px;
@@ -180,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            background: linear-gradient(135deg, #2c7da0, #1f5068);
+            background: #2c7da0; /* RANGI MOJA - HAKUNA GRADIENT */
         }
         .avatar img {
             width: 100%;
@@ -191,34 +157,148 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
             font-size: 35px;
             color: white;
         }
-        .form-group {
-            margin-bottom: 15px;
+        
+        .welcome-text { font-size: 0.85rem; color: #94a3b8; }
+        .student-name { font-size: 1.1rem; font-weight: 600; margin: 5px 0; color: white; }
+        .student-id { font-size: 0.7rem; margin-top: 8px; color: #94a3b8; }
+        .student-id i { margin-right: 5px; }
+        
+        .nav-menu { flex: 1; padding: 15px; }
+        .nav-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 15px; 
+            border-radius: 12px; 
+            color: #cbdbe6; 
+            text-decoration: none; 
+            margin-bottom: 5px; 
+            cursor: pointer; 
         }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
+        /* HAKUNA HOVER EFFECTS - zimeondolewa */
+        .nav-item.active { 
+            background: #2c7da0; 
+            color: white; 
         }
-        .form-group textarea {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
+        .nav-item.active i { color: white; }
+        .nav-item i { width: 20px; color: #cbdbe6; }
+        .nav-item.active i { color: white; }
+        .nav-label { font-size: 0.9rem; }
+        .logout-item { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        
+        /* ========== MAIN CONTENT ========== */
+        .main-content { flex: 1; padding: 20px 25px; overflow-y: auto; margin-left: 280px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .page-title { font-size: 1.6rem; color: #0a2b38; }
+        .date-badge { background: white; padding: 8px 18px; border-radius: 30px; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        /* ========== WIDGET CARDS ========== */
+        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        
+        /* ========== FORM STYLES ========== */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.85rem; }
+        .form-group textarea { 
+            width: 100%; 
+            padding: 10px 12px; 
+            border-radius: 12px; 
+            border: 1px solid #cbdbe6; 
+            outline: none; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+        .form-group textarea:focus { border-color: #2c7da0; }
+        
+        /* ========== BUTTONS - COLOR #2c7da0 ========== */
         .btn-primary {
-            background: #f39c12;
+            background: #2c7da0;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary:hover {
+            background: #1f5a7a;
+            color: white;
+            text-decoration: none;
+        }
+        .btn-primary i { margin-right: 6px; }
+        
+        /* ========== SUBMIT RATING BUTTON - COLOR #2c7da0 ========== */
+        .submit-rating-btn {
+            background: #2c7da0;
             color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 5px 15px;
+            border-radius: 20px;
             cursor: pointer;
+            font-size: 0.75rem;
+            margin-top: 10px;
         }
-        .rated-star {
-            color: #f5b042;
-            font-size: 1rem;
+        .submit-rating-btn:hover {
+            background: #1f5a7a;
         }
-        .rated-star.empty {
+        
+        /* ========== TOAST NOTIFICATION ========== */
+        .toast-notification { position: fixed; bottom: 20px; right: 20px; padding: 12px 20px; border-radius: 8px; color: white; z-index: 9999; animation: slideIn 0.3s ease; display: flex; align-items: center; gap: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.2); }
+        .toast-success { background: #2c7da0; }
+        .toast-error { background: #e74c3c; }
+        @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+        @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+        
+        /* ========== RATING STARS ========== */
+        .rating-star {
+            cursor: pointer;
+            font-size: 1.5rem;
             color: #e2e8f0;
+            transition: color 0.2s;
+        }
+        .rating-star:hover,
+        .rating-star.active {
+            color: #f5b042;
+        }
+        
+        /* ========== TICKET CARD ========== */
+        .ticket-card {
+            background: #f9fdfe;
+            border-left: 3px solid #2c7da0;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+        .response-box {
+            background: #e8f0f5;
+            border-radius: 10px;
+            padding: 12px;
+            margin: 10px 0;
+            border-left: 3px solid #2c7da0;
+        }
+        .rating-box {
+            margin-top: 10px;
+            padding-top: 10px;
+            border-top: 1px solid #e2edf2;
+        }
+        
+        /* ========== MESSAGE ========== */
+        .message { padding: 10px 14px; border-radius: 12px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
+        .message.show { display: flex; }
+        .message-success { background: #d9f0e5; color: #1d6f42; }
+        .message-error { background: #fde8e8; color: #c0392b; }
+        
+        /* ========== RATED STARS ========== */
+        .rated-star { color: #f5b042; font-size: 1rem; }
+        .rated-star.empty { color: #e2e8f0; }
+        
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            .sidebar { width: 70px; }
+            .sidebar .nav-label { display: none; }
+            .sidebar .welcome-text, .sidebar .student-name, .sidebar .student-id { display: none; }
+            .main-content { margin-left: 70px; padding: 15px; }
         }
     </style>
 </head>
@@ -271,7 +351,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
             <div id="resolvedTicketsList">
                 <?php if(mysqli_num_rows($resolved_result) == 0): ?>
                     <div style="text-align:center; padding:30px; color:#7f8c8d;">
-                        <i class="fas fa-check-circle" style="font-size:2rem;"></i>
+                        <i class="fas fa-check-circle" style="font-size:2rem; color: #2c7da0;"></i>
                         <p>Hakuna tiketi mpya zilizotatuliwa. Baada ya maswali yako kujibiwa, utaweza kuyakadiria hapa.</p>
                     </div>
                 <?php else: ?>
@@ -296,7 +376,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
                             <?php endif; ?>
                             
                             <div class="rating-box">
-                                <label style="display: block; margin-bottom: 8px;"><i class="fas fa-star"></i> Kadiria huduma:</label>
+                                <label style="display: block; margin-bottom: 8px;"><i class="fas fa-star" style="color: #2c7da0;"></i> Kadiria huduma:</label>
                                 <div class="stars-container">
                                     <span class="rating-star" data-rate="1">★</span>
                                     <span class="rating-star" data-rate="2">★</span>
@@ -304,8 +384,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
                                     <span class="rating-star" data-rate="4">★</span>
                                     <span class="rating-star" data-rate="5">★</span>
                                 </div>
-                                <textarea class="rating-feedback" placeholder="Maoni yako kuhusu jibu hili (si lazima)" rows="2" style="width:100%; margin-top:10px; padding:8px; border:1px solid #ddd; border-radius:8px;"></textarea>
-                                <button class="submit-rating-btn" data-id="<?php echo $ticket['id']; ?>" style="margin-top:10px; background:#27ae60; color:white; border:none; padding:5px 15px; border-radius:20px; cursor:pointer;">
+                                <textarea class="rating-feedback" placeholder="Maoni yako kuhusu jibu hili (si lazima)" rows="2" style="width:100%; margin-top:10px; padding:8px; border:1px solid #ddd; border-radius:8px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;"></textarea>
+                                <button class="submit-rating-btn" data-id="<?php echo $ticket['id']; ?>">
                                     <i class="fas fa-paper-plane"></i> Tuma Ukadiriaji
                                 </button>
                             </div>
@@ -336,7 +416,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
         </div>
         <?php endif; ?>
 
-        <!-- SECTION 3: General Feedback (FIXED - removed department dropdown) -->
+        <!-- SECTION 3: General Feedback -->
         <div class="widget-card">
             <div class="flex-between"><strong>💬 Maoni ya Jumla</strong></div>
             <p>Shiriki maoni yako kuhusu mfumo wa IAA Helpdesk kwa ujumla.</p>
@@ -432,6 +512,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['submit_feedback'])) {
                     showNotification('Hitilafu ya mtandao. Tafadhali jaribu tena.', 'error');
                 }
             });
+        }
+    });
+
+    // Logout confirmation
+    document.getElementById('logoutBtn')?.addEventListener('click', function(e) {
+        if (!confirm('Are you sure you want to logout?')) {
+            e.preventDefault();
         }
     });
 </script>

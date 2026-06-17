@@ -87,7 +87,30 @@ if (isset($_GET['clear_data'])) {
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Additional style for avatar with image */
+        /* ========== BASE STYLES ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .app-container { display: flex; height: 100vh; background: #f5f7fa; }
+        
+        /* ========== SIDEBAR - STATIC ========== */
+        .sidebar { 
+            width: 280px; 
+            background: #0a2b38; /* RANGI MOJA - HAKUNA GRADIENT */
+            color: #e0edf5; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto; 
+            position: fixed; 
+            height: 100vh; 
+            left: 0; 
+            top: 0; 
+            z-index: 100;
+        }
+        .profile-area { 
+            padding: 25px 20px; 
+            text-align: center; 
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
         .avatar {
             width: 70px;
             height: 70px;
@@ -97,7 +120,7 @@ if (isset($_GET['clear_data'])) {
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            background: linear-gradient(135deg, #2c7da0, #1f5068);
+            background: #2c7da0; /* RANGI MOJA - HAKUNA GRADIENT */
         }
         .avatar img {
             width: 100%;
@@ -108,46 +131,109 @@ if (isset($_GET['clear_data'])) {
             font-size: 35px;
             color: white;
         }
-        .message { 
-            padding: 10px 14px; 
-            border-radius: 12px; 
-            margin-bottom: 20px; 
-            display: none; 
-            align-items: center; 
-            gap: 10px; 
-        }
-        .message.show { 
+        
+        .welcome-text { font-size: 0.85rem; color: #94a3b8; }
+        .student-name { font-size: 1.1rem; font-weight: 600; margin: 5px 0; color: white; }
+        .student-id { font-size: 0.7rem; margin-top: 8px; color: #94a3b8; }
+        .student-id i { margin-right: 5px; }
+        
+        .nav-menu { flex: 1; padding: 15px; }
+        .nav-item { 
             display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 15px; 
+            border-radius: 12px; 
+            color: #cbdbe6; 
+            text-decoration: none; 
+            margin-bottom: 5px; 
+            cursor: pointer; 
         }
-        .message-success { 
-            background: #d9f0e5; 
-            color: #1d6f42; 
+        /* HAKUNA HOVER EFFECTS - zimeondolewa */
+        .nav-item.active { 
+            background: #2c7da0; 
+            color: white; 
         }
-        .message-error { 
-            background: #fde8e8; 
-            color: #c0392b; 
+        .nav-item.active i { color: white; }
+        .nav-item i { width: 20px; color: #cbdbe6; }
+        .nav-item.active i { color: white; }
+        .nav-label { font-size: 0.9rem; }
+        .logout-item { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        
+        /* ========== MAIN CONTENT ========== */
+        .main-content { flex: 1; padding: 20px 25px; overflow-y: auto; margin-left: 280px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .page-title { font-size: 1.6rem; color: #0a2b38; }
+        .date-badge { background: white; padding: 8px 18px; border-radius: 30px; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        /* ========== WIDGET CARDS ========== */
+        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        
+        /* ========== FORM STYLES ========== */
+        .form-group { margin-bottom: 15px; }
+        .form-group label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.85rem; }
+        .form-group input, .form-group select { 
+            width: 100%; 
+            padding: 10px 12px; 
+            border-radius: 12px; 
+            border: 1px solid #cbdbe6; 
+            outline: none; 
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-        .form-group {
-            margin-bottom: 15px;
-        }
-        .form-group label {
-            display: block;
-            margin-bottom: 5px;
-            font-weight: 500;
-        }
-        .form-group input, .form-group select {
-            width: 100%;
-            padding: 8px 12px;
-            border: 1px solid #ddd;
-            border-radius: 8px;
-        }
+        .form-group input:focus, .form-group select:focus { border-color: #2c7da0; }
+        
+        /* ========== BUTTONS - COLOR #2c7da0 ========== */
         .btn-primary {
             background: #2c7da0;
-            color: white;
             border: none;
-            padding: 10px 20px;
-            border-radius: 8px;
+            padding: 8px 20px;
+            border-radius: 25px;
+            color: white;
             cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary:hover {
+            background: #1f5a7a;
+            color: white;
+            text-decoration: none;
+        }
+        .btn-primary i { margin-right: 6px; }
+        
+        /* ========== CLEAR DATA BUTTON - COLOR #2c7da0 ========== */
+        .btn-danger {
+            background: #2c7da0;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-block;
+            margin-top: 10px;
+        }
+        .btn-danger:hover {
+            background: #1f5a7a;
+            color: white;
+            text-decoration: none;
+        }
+        .btn-danger i { margin-right: 6px; }
+        
+        /* ========== MESSAGE ========== */
+        .message { padding: 10px 14px; border-radius: 12px; margin-bottom: 20px; display: none; align-items: center; gap: 10px; }
+        .message.show { display: flex; }
+        .message-success { background: #d9f0e5; color: #1d6f42; }
+        .message-error { background: #fde8e8; color: #c0392b; }
+        
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            .sidebar { width: 70px; }
+            .sidebar .nav-label { display: none; }
+            .sidebar .welcome-text, .sidebar .student-name, .sidebar .student-id { display: none; }
+            .main-content { margin-left: 70px; padding: 15px; }
         }
     </style>
 </head>
@@ -225,14 +311,14 @@ if (isset($_GET['clear_data'])) {
                         <option>None</option>
                     </select>
                 </div>
-                <button type="submit" name="save_settings" class="btn-primary">Save Changes</button>
+                <button type="submit" name="save_settings" class="btn-primary"><i class="fas fa-save"></i> Save Changes</button>
             </form>
         </div>
 
         <div class="widget-card">
             <div class="flex-between"><strong>🔒 Privacy & Data</strong></div>
             <p>Your data is stored in our secure database. You can clear your ticket history at any time.</p>
-            <a href="?clear_data=1" onclick="return confirm('Are you sure? This will delete ALL your tickets and data!')" class="btn-primary" style="background:#c0392b; margin-top:10px; display:inline-block;">Clear All My Data</a>
+            <a href="?clear_data=1" onclick="return confirm('Are you sure? This will delete ALL your tickets and data!')" class="btn-danger"><i class="fas fa-trash-alt"></i> Clear All My Data</a>
         </div>
     </main>
 </div>
@@ -244,6 +330,13 @@ if (isset($_GET['clear_data'])) {
         if (dateElement) dateElement.innerText = new Date().toLocaleDateString('en-US', options);
     }
     setCurrentDate();
+
+    // Logout confirmation
+    document.getElementById('logoutBtn')?.addEventListener('click', function(e) {
+        if (!confirm('Are you sure you want to logout?')) {
+            e.preventDefault();
+        }
+    });
 </script>
 </body>
 </html>

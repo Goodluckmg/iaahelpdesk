@@ -58,7 +58,30 @@ $kb_result = mysqli_query($conn, $kb_query);
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <link rel="stylesheet" href="css/style.css">
     <style>
-        /* Additional style for avatar with image */
+        /* ========== BASE STYLES ========== */
+        * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        .app-container { display: flex; height: 100vh; background: #f5f7fa; }
+        
+        /* ========== SIDEBAR - STATIC ========== */
+        .sidebar { 
+            width: 280px; 
+            background: #0a2b38; /* RANGI MOJA - HAKUNA GRADIENT */
+            color: #e0edf5; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto; 
+            position: fixed; 
+            height: 100vh; 
+            left: 0; 
+            top: 0; 
+            z-index: 100;
+        }
+        .profile-area { 
+            padding: 25px 20px; 
+            text-align: center; 
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        
         .avatar {
             width: 70px;
             height: 70px;
@@ -68,7 +91,7 @@ $kb_result = mysqli_query($conn, $kb_query);
             align-items: center;
             justify-content: center;
             overflow: hidden;
-            background: linear-gradient(135deg, #2c7da0, #1f5068);
+            background: #2c7da0; /* RANGI MOJA - HAKUNA GRADIENT */
         }
         .avatar img {
             width: 100%;
@@ -78,6 +101,92 @@ $kb_result = mysqli_query($conn, $kb_query);
         .avatar i {
             font-size: 35px;
             color: white;
+        }
+        
+        .welcome-text { font-size: 0.85rem; color: #94a3b8; }
+        .student-name { font-size: 1.1rem; font-weight: 600; margin: 5px 0; color: white; }
+        .student-id { font-size: 0.7rem; margin-top: 8px; color: #94a3b8; }
+        .student-id i { margin-right: 5px; }
+        
+        .nav-menu { flex: 1; padding: 15px; }
+        .nav-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 15px; 
+            border-radius: 12px; 
+            color: #cbdbe6; 
+            text-decoration: none; 
+            margin-bottom: 5px; 
+            cursor: pointer; 
+        }
+        /* HAKUNA HOVER EFFECTS - zimeondolewa */
+        .nav-item.active { 
+            background: #2c7da0; 
+            color: white; 
+        }
+        .nav-item.active i { color: white; }
+        .nav-item i { width: 20px; color: #cbdbe6; }
+        .nav-item.active i { color: white; }
+        .nav-label { font-size: 0.9rem; }
+        .logout-item { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        
+        /* ========== MAIN CONTENT ========== */
+        .main-content { flex: 1; padding: 20px 25px; overflow-y: auto; margin-left: 280px; }
+        .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
+        .page-title { font-size: 1.6rem; color: #0a2b38; }
+        .date-badge { background: white; padding: 8px 18px; border-radius: 30px; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        /* ========== WIDGET CARDS ========== */
+        .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
+        .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        
+        /* ========== BUTTONS - COLOR #2c7da0 ========== */
+        .btn-primary {
+            background: #2c7da0;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary:hover {
+            background: #1f5a7a;
+            color: white;
+            text-decoration: none;
+        }
+        .btn-primary i { margin-right: 6px; }
+        
+        /* ========== KB LIST ========== */
+        .kb-list {
+            list-style: none;
+            padding: 0;
+        }
+        .kb-list li {
+            padding: 12px 16px;
+            margin-bottom: 8px;
+            background: #f8fafc;
+            border-radius: 12px;
+            border-left: 3px solid #2c7da0;
+            font-size: 0.9rem;
+        }
+        .kb-list li i {
+            color: #2c7da0;
+            margin-right: 10px;
+        }
+        .kb-list li strong {
+            color: #0a2b38;
+        }
+        
+        /* ========== RESPONSIVE ========== */
+        @media (max-width: 768px) {
+            .sidebar { width: 70px; }
+            .sidebar .nav-label { display: none; }
+            .sidebar .welcome-text, .sidebar .student-name, .sidebar .student-id { display: none; }
+            .main-content { margin-left: 70px; padding: 15px; }
         }
     </style>
 </head>
@@ -130,11 +239,11 @@ $kb_result = mysqli_query($conn, $kb_query);
                     <li><i class="fas fa-check-circle"></i> <strong>Library book renewal:</strong> – Can be done online via library portal.</li>
                 <?php endif; ?>
             </ul>
-            <hr>
-            <p><i class="fas fa-headset"></i> Still have questions? <a href="student_submit-query.php">Submit a query</a> for personalized support.</p>
+            <hr style="margin: 20px 0; border: none; border-top: 1px solid #e2edf2;">
+            <p><i class="fas fa-headset" style="color: #2c7da0;"></i> Still have questions? <a href="student_submit-query.php" style="color: #2c7da0; text-decoration: none; font-weight: 600;">Submit a query</a> for personalized support.</p>
             <div style="margin-top: 20px; background: #e8f0f5; padding: 15px; border-radius: 20px;">
-                <i class="fas fa-phone-alt"></i> <strong>ICT Support Hotline:</strong> +255 712 345 678<br>
-                <i class="fas fa-envelope"></i> <strong>Email:</strong> helpdesk@iaa.ac.tz
+                <i class="fas fa-phone-alt" style="color: #2c7da0;"></i> <strong>ICT Support Hotline:</strong> +255 712 345 678<br>
+                <i class="fas fa-envelope" style="color: #2c7da0;"></i> <strong>Email:</strong> helpdesk@iaa.ac.tz
             </div>
         </div>
     </main>
@@ -147,6 +256,13 @@ $kb_result = mysqli_query($conn, $kb_query);
         if (dateElement) dateElement.innerText = new Date().toLocaleDateString('en-US', options);
     }
     setCurrentDate();
+
+    // Logout confirmation
+    document.getElementById('logoutBtn')?.addEventListener('click', function(e) {
+        if (!confirm('Are you sure you want to logout?')) {
+            e.preventDefault();
+        }
+    });
 </script>
 </body>
 </html>
