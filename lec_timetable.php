@@ -180,52 +180,172 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .app-container { display: flex; height: 100vh; background: #f5f7fa; }
-        .sidebar { width: 280px; background: linear-gradient(180deg, #0a2b38 0%, #0d3b4c 100%); color: #e0edf5; display: flex; flex-direction: column; overflow-y: auto; position: fixed; height: 100vh; left: 0; top: 0; z-index: 100; }
-        .profile-area { padding: 25px 20px; text-align: center; border-bottom: 1px solid rgba(255,255,255,0.1); }
-        .avatar { width: 80px; height: 80px; border-radius: 50%; margin: 0 auto 12px; display: flex; align-items: center; justify-content: center; background: linear-gradient(135deg, #667eea, #764ba2); }
+        
+        /* ========== SIDEBAR - STATIC ========== */
+        .sidebar { 
+            width: 280px; 
+            background: #0a2b38; /* RANGI MOJA - HAKUNA GRADIENT */
+            color: #e0edf5; 
+            display: flex; 
+            flex-direction: column; 
+            overflow-y: auto; 
+            position: fixed; 
+            height: 100vh; 
+            left: 0; 
+            top: 0; 
+            z-index: 100;
+        }
+        .profile-area { 
+            padding: 25px 20px; 
+            text-align: center; 
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .avatar {
+            width: 80px;
+            height: 80px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: #2c7da0; /* RANGI MOJA - HAKUNA GRADIENT */
+        }
         .avatar i { font-size: 40px; color: white; }
         .welcome-text { font-size: 0.85rem; color: #94a3b8; }
         .user-name { font-size: 1.2rem; font-weight: 600; margin: 5px 0; color: white; }
-        .user-role { font-size: 0.7rem; background: #667eea; display: inline-block; padding: 3px 12px; border-radius: 20px; }
+        .user-role { font-size: 0.7rem; background: #2c7da0; display: inline-block; padding: 3px 12px; border-radius: 20px; }
         .user-id { font-size: 0.7rem; margin-top: 8px; color: #94a3b8; }
         .nav-menu { flex: 1; padding: 15px; }
-        .nav-item { display: flex; align-items: center; gap: 12px; padding: 12px 15px; border-radius: 12px; color: #cbdbe6; text-decoration: none; margin-bottom: 5px; transition: 0.2s; cursor: pointer; }
-        .nav-item:hover { background: rgba(255,255,255,0.1); color: white; }
-        .nav-item.active { background: #667eea; color: white; }
-        .nav-item i { width: 20px; }
+        .nav-item { 
+            display: flex; 
+            align-items: center; 
+            gap: 12px; 
+            padding: 12px 15px; 
+            border-radius: 12px; 
+            color: #cbdbe6; 
+            text-decoration: none; 
+            margin-bottom: 5px; 
+            cursor: pointer; 
+        }
+        /* HAKUNA HOVER EFFECTS - zimeondolewa */
+        .nav-item.active { 
+            background: #2c7da0; 
+            color: white; 
+        }
+        .nav-item.active i { color: white; }
+        .nav-item i { width: 20px; color: #cbdbe6; }
+        .nav-item.active i { color: white; }
         .logout-item { margin-top: auto; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        
+        /* ========== MAIN CONTENT ========== */
         .main-content { flex: 1; padding: 20px 25px; overflow-y: auto; margin-left: 280px; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
         .page-title { font-size: 1.6rem; color: #0a2b38; }
         .date-badge { background: white; padding: 8px 18px; border-radius: 30px; font-size: 0.8rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        
+        /* ========== WIDGET CARDS ========== */
         .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 25px; box-shadow: 0 2px 10px rgba(0,0,0,0.05); }
         .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
-        .btn-primary { background: #667eea; border: none; padding: 8px 20px; border-radius: 25px; color: white; cursor: pointer; font-size: 0.8rem; transition: 0.2s; text-decoration: none; display: inline-block; }
-        .btn-primary:hover { background: #5a67d8; transform: translateY(-2px); }
-        .btn-outline { background: transparent; border: 1px solid #667eea; color: #667eea; }
-        .btn-outline:hover { background: #667eea; color: white; }
-        .btn-danger { background: #e74c3c; }
-        .btn-danger:hover { background: #c0392b; }
-        .btn-success { background: #27ae60; }
-        .btn-success:hover { background: #1e8449; }
-        .btn-warning { background: #f39c12; }
-        .btn-warning:hover { background: #d68910; }
+        
+        /* ========== BUTTONS - COLOR #2c7da0 ========== */
+        .btn-primary {
+            background: #2c7da0;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-primary:hover {
+            background: #1f5a7a;
+            color: white;
+            text-decoration: none;
+        }
+        .btn-primary i { margin-right: 6px; }
+        
+        /* ========== SUCCESS BUTTON - COLOR #2c7da0 ========== */
+        .btn-success {
+            background: #2c7da0;
+            border: none;
+            padding: 8px 20px;
+            border-radius: 25px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.8rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-success:hover {
+            background: #1f5a7a;
+            color: white;
+            text-decoration: none;
+        }
+        
+        /* ========== OUTLINE BUTTON ========== */
+        .btn-outline {
+            background: transparent;
+            border: 1px solid #2c7da0;
+            color: #2c7da0;
+        }
+        .btn-outline:hover {
+            background: #2c7da0;
+            color: white;
+        }
+        
+        /* ========== DANGER BUTTON - NYEKUNDU ========== */
+        .btn-danger {
+            background: #e74c3c;
+            border: none;
+            padding: 4px 12px;
+            border-radius: 15px;
+            color: white;
+            cursor: pointer;
+            font-size: 0.7rem;
+            text-decoration: none;
+            display: inline-block;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+            color: white;
+            text-decoration: none;
+        }
+        
+        /* ========== REMOVE FILE BUTTON - NYEKUNDU ========== */
+        .remove-file-btn {
+            background: #e74c3c;
+            color: white;
+            border: none;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.65rem;
+            cursor: pointer;
+        }
+        .remove-file-btn:hover {
+            background: #c0392b;
+        }
+        
+        /* ========== UPLOAD GRID ========== */
         .upload-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-bottom: 20px; }
         .upload-card { background: #f8fafc; border-radius: 16px; padding: 20px; text-align: center; transition: 0.2s; border: 1px solid #e2edf2; }
-        .upload-card:hover { border-color: #667eea; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
-        .upload-icon { width: 60px; height: 60px; background: linear-gradient(135deg, #667eea20, #764ba220); border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; }
-        .upload-icon i { font-size: 28px; color: #667eea; }
+        .upload-card:hover { border-color: #2c7da0; box-shadow: 0 4px 12px rgba(0,0,0,0.1); }
+        .upload-icon { width: 60px; height: 60px; background: #e8f0f5; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin: 0 auto 15px; }
+        .upload-icon i { font-size: 28px; color: #2c7da0; }
         .upload-card h3 { color: #0a2b38; margin-bottom: 5px; }
         .upload-card p { font-size: 0.75rem; color: #64748b; margin-bottom: 15px; }
         .upload-form { border: 2px dashed #cbdbe6; border-radius: 12px; padding: 15px; margin-top: 10px; background: white; }
-        .upload-form:hover { border-color: #667eea; background: #f1f5f9; }
+        .upload-form:hover { border-color: #2c7da0; background: #f1f5f9; }
         .upload-form input[type="file"] { display: none; }
         .upload-form label { cursor: pointer; display: block; padding: 10px; }
-        .upload-form select { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.75rem; margin-bottom: 8px; }
+        .upload-form select { width: 100%; padding: 6px; border-radius: 6px; border: 1px solid #ddd; font-size: 0.75rem; margin-bottom: 8px; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
         .upload-form button { margin-top: 10px; }
+        
+        /* ========== DOCUMENTS LIST ========== */
         .documents-list { margin-top: 20px; }
         .doc-category { margin-bottom: 20px; }
-        .doc-category h4 { color: #0a2b38; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #667eea; display: inline-block; }
+        .doc-category h4 { color: #0a2b38; margin-bottom: 10px; padding-bottom: 5px; border-bottom: 2px solid #2c7da0; display: inline-block; }
         .doc-item { display: flex; justify-content: space-between; align-items: center; padding: 12px; background: #f8fafc; border-radius: 12px; margin-bottom: 8px; transition: 0.2s; }
         .doc-item:hover { background: #f1f5f9; }
         .doc-info { display: flex; align-items: center; gap: 12px; }
@@ -233,19 +353,21 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
         .doc-details { display: flex; flex-direction: column; }
         .doc-name { font-weight: 600; color: #0a2b38; }
         .doc-meta { font-size: 0.7rem; color: #94a3b8; }
-        .doc-actions a { margin-left: 8px; padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; text-decoration: none; color: white; display: inline-block; }
-        .doc-actions .view-doc { background: #2c7da0; }
-        .doc-actions .view-doc:hover { background: #1a5a7a; }
-        .doc-actions .del-doc { background: #e74c3c; }
+        .doc-actions { display: flex; gap: 5px; flex-wrap: wrap; }
+        .doc-actions .view-doc { background: #2c7da0; padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; text-decoration: none; color: white; display: inline-block; }
+        .doc-actions .view-doc:hover { background: #1f5a7a; }
+        .doc-actions .del-doc { background: #e74c3c; padding: 4px 10px; border-radius: 15px; font-size: 0.7rem; text-decoration: none; color: white; display: inline-block; }
         .doc-actions .del-doc:hover { background: #c0392b; }
+        
+        /* ========== ANNOUNCEMENTS ========== */
         .announcement-list { max-height: 400px; overflow-y: auto; }
-        .announcement-item { background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 12px; border-left: 4px solid #667eea; transition: 0.2s; position: relative; }
+        .announcement-item { background: #f8fafc; border-radius: 12px; padding: 15px; margin-bottom: 12px; border-left: 4px solid #2c7da0; transition: 0.2s; position: relative; }
         .announcement-item:hover { background: #f1f5f9; }
         .announcement-title { font-weight: 700; color: #0a2b38; margin-bottom: 5px; display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 10px; }
         .announcement-meta { font-size: 0.7rem; color: #94a3b8; margin-bottom: 8px; display: flex; gap: 15px; flex-wrap: wrap; }
         .announcement-meta i { margin-right: 3px; }
         .announcement-message { font-size: 0.85rem; color: #334155; line-height: 1.4; margin-bottom: 10px; }
-        .announcement-badge { background: #667eea; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.6rem; }
+        .announcement-badge { background: #2c7da0; color: white; padding: 2px 8px; border-radius: 12px; font-size: 0.6rem; }
         .announcement-badge.high { background: #e74c3c; }
         .announcement-badge.medium { background: #f39c12; }
         .announcement-badge.low { background: #27ae60; }
@@ -254,6 +376,8 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
         .announcement-doc a:hover { text-decoration: underline; }
         .del-ann { color: #e74c3c; cursor: pointer; font-size: 0.8rem; opacity: 0.6; transition: 0.2s; }
         .del-ann:hover { opacity: 1; }
+        
+        /* ========== MODAL STYLES ========== */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: white; border-radius: 20px; padding: 25px; width: 90%; max-width: 550px; max-height: 85vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 1px solid #e2edf2; }
@@ -261,8 +385,8 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
         .close-modal:hover { color: #c0392b; }
         .form-group { margin-bottom: 15px; }
         .form-group label { font-weight: 600; display: block; margin-bottom: 5px; font-size: 0.85rem; }
-        input, textarea, select { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #cbdbe6; outline: none; }
-        input:focus, textarea:focus, select:focus { border-color: #667eea; }
+        input, textarea, select { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #cbdbe6; outline: none; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        input:focus, textarea:focus, select:focus { border-color: #2c7da0; }
         .priority-select { display: flex; gap: 15px; margin-top: 5px; }
         .priority-option { display: flex; align-items: center; gap: 5px; cursor: pointer; }
         .priority-option input { width: auto; }
@@ -272,8 +396,9 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
         .optional-badge { background: #e0f0f5; color: #2c7da0; font-size: 0.6rem; padding: 2px 8px; border-radius: 20px; margin-left: 8px; }
         .file-input-group { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
         .document-file-label { background: #2c7da0; color: white; padding: 8px 16px; border-radius: 30px; font-size: 0.75rem; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; }
+        .document-file-label:hover { background: #1f5a7a; }
         .selected-file-name { font-size: 0.7rem; color: #2c7da0; }
-        .remove-file-btn { background: #c0392b; color: white; border: none; padding: 5px 12px; border-radius: 20px; font-size: 0.65rem; cursor: pointer; }
+        
         @media (max-width: 768px) { 
             .sidebar { width: 70px; } 
             .sidebar span { display: none; } 
@@ -298,7 +423,8 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
             <a href="lec_pending.php" class="nav-item"><i class="fas fa-clock"></i><span>Student query</span></a>
             <a href="lec_resolved.php" class="nav-item"><i class="fas fa-check-circle"></i><span>Resolved</span></a>
             <a href="lec_timetable.php" class="nav-item active"><i class="fas fa-calendar-alt"></i><span>Exam Timetable</span></a>
-            <div class="logout-item"><a href="logout.php" class="nav-item"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></div>
+            <a href="lec_edit-photo.php" class="nav-item"><i class="fas fa-camera"></i><span>Edit Photo</span></a>
+            <div class="logout-item"><a href="logout.php" class="nav-item" id="logoutBtn"><i class="fas fa-sign-out-alt"></i><span>Logout</span></a></div>
         </div>
     </aside>
 
@@ -328,7 +454,7 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
                         <label><i class="fas fa-cloud-upload-alt"></i> Click to choose file
                             <input type="file" name="doc_file" accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.png" required>
                         </label>
-                        <button type="submit" name="upload_document" class="btn-primary btn-success" style="font-size:0.7rem; padding:5px 15px;">Upload</button>
+                        <button type="submit" name="upload_document" class="btn-success" style="font-size:0.7rem; padding:5px 15px;">Upload</button>
                     </form>
                 </div>
 
@@ -342,7 +468,7 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
                         <label><i class="fas fa-cloud-upload-alt"></i> Click to choose file
                             <input type="file" name="doc_file" accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.png" required>
                         </label>
-                        <button type="submit" name="upload_document" class="btn-primary btn-success" style="font-size:0.7rem; padding:5px 15px;">Upload</button>
+                        <button type="submit" name="upload_document" class="btn-success" style="font-size:0.7rem; padding:5px 15px;">Upload</button>
                     </form>
                 </div>
 
@@ -356,7 +482,7 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
                         <label><i class="fas fa-cloud-upload-alt"></i> Click to choose file
                             <input type="file" name="doc_file" accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.png" required>
                         </label>
-                        <button type="submit" name="upload_document" class="btn-primary btn-success" style="font-size:0.7rem; padding:5px 15px;">Upload</button>
+                        <button type="submit" name="upload_document" class="btn-success" style="font-size:0.7rem; padding:5px 15px;">Upload</button>
                     </form>
                 </div>
 
@@ -370,7 +496,7 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
                         <label><i class="fas fa-cloud-upload-alt"></i> Click to choose file
                             <input type="file" name="doc_file" accept=".pdf,.xlsx,.xls,.doc,.docx,.jpg,.png" required>
                         </label>
-                        <button type="submit" name="upload_timetable" class="btn-primary btn-success" style="font-size:0.7rem; padding:5px 15px;">Upload</button>
+                        <button type="submit" name="upload_timetable" class="btn-success" style="font-size:0.7rem; padding:5px 15px;">Upload</button>
                     </form>
                 </div>
             </div>
@@ -573,7 +699,7 @@ while ($row = mysqli_fetch_assoc($ann_result)) {
     }
 
     // ========== LOGOUT ==========
-    document.querySelector('.logout-item a')?.addEventListener('click', (e) => {
+    document.getElementById('logoutBtn')?.addEventListener('click', (e) => {
         if(!confirm('Are you sure you want to logout?')) e.preventDefault();
     });
 </script>

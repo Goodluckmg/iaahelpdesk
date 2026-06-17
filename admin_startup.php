@@ -141,8 +141,8 @@ $total_opportunities = count($opportunities);
         .page-title { font-size: 1.6rem; color: #0a2b38; }
         .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; }
         .startup-stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 20px; margin-bottom: 25px; }
-        .stat-card { background: white; border-radius: 20px; padding: 18px; border-left: 4px solid #e74c3c; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .stat-number { font-size: 1.8rem; font-weight: 800; color: #c0392b; margin-top: 5px; }
+        .stat-card { background: white; border-radius: 20px; padding: 18px; border-left: 4px solid#2c7da0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .stat-number { font-size: 1.8rem; font-weight: 800; color: #2c7da0; margin-top: 5px; }
         .idea-card, .opportunity-card { background: white; border-radius: 16px; padding: 18px; margin-bottom: 15px; border: 1px solid #e2edf2; }
         .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; flex-wrap: wrap; gap: 10px; }
         .status-badge-pending { background: #fff3e0; color: #b45f06; padding: 4px 12px; border-radius: 20px; font-size: 0.7rem; }
@@ -159,7 +159,7 @@ $total_opportunities = count($opportunities);
         input, select, textarea { width: 100%; padding: 10px 12px; border-radius: 12px; border: 1px solid #cbdbe6; outline: none; }
         .startup-tabs { display: flex; gap: 5px; margin-bottom: 20px; background: white; padding: 5px; border-radius: 15px; border: 1px solid #e2edf2; }
         .tab-btn { flex: 1; padding: 10px; border: none; background: transparent; border-radius: 12px; font-weight: 600; cursor: pointer; transition: 0.3s; display: flex; align-items: center; justify-content: center; gap: 8px; }
-        .tab-btn.active { background: #e74c3c; color: white; }
+        .tab-btn.active { background:#2c7da0; color: white; }
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); align-items: center; justify-content: center; z-index: 1000; }
         .modal-content { background: white; border-radius: 20px; padding: 25px; width: 90%; max-width: 500px; max-height: 80vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }

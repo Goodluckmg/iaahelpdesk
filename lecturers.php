@@ -38,10 +38,10 @@ $user = mysqli_fetch_assoc($result);
             background: #f5f7fa;
         }
 
-        /* ========== SIDEBAR STYLES ========== */
+        /* ========== SIDEBAR - STATIC ========== */
         .sidebar {
             width: 280px;
-            background: linear-gradient(180deg, #0a2b38 0%, #0d3b4c 100%);
+            background: #0a2b38; /* RANGI MOJA - HAKUNA GRADIENT */
             color: #e0edf5;
             display: flex;
             flex-direction: column;
@@ -67,7 +67,7 @@ $user = mysqli_fetch_assoc($result);
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: #2c7da0; /* RANGI MOJA - HAKUNA GRADIENT */
         }
 
         .avatar i {
@@ -89,7 +89,7 @@ $user = mysqli_fetch_assoc($result);
 
         .user-role {
             font-size: 0.7rem;
-            background: #667eea;
+            background: #2c7da0;
             display: inline-block;
             padding: 3px 12px;
             border-radius: 20px;
@@ -115,23 +115,21 @@ $user = mysqli_fetch_assoc($result);
             color: #cbdbe6;
             text-decoration: none;
             margin-bottom: 5px;
-            transition: 0.2s;
             cursor: pointer;
         }
-
-        .nav-item:hover {
-            background: rgba(255,255,255,0.1);
-            color: white;
-        }
+        /* HAKUNA HOVER EFFECTS - zimeondolewa */
 
         .nav-item.active {
-            background: #667eea;
+            background: #2c7da0;
             color: white;
         }
 
         .nav-item i {
             width: 20px;
         }
+        .nav-item.active i { color: white; }
+        .nav-item i { color: #cbdbe6; }
+        .nav-item.active i { color: white; }
 
         .logout-item {
             margin-top: auto;
@@ -183,16 +181,11 @@ $user = mysqli_fetch_assoc($result);
             padding: 20px;
             text-align: center;
             box-shadow: 0 2px 10px rgba(0,0,0,0.05);
-            transition: transform 0.2s;
-        }
-
-        .stat-card:hover {
-            transform: translateY(-3px);
         }
 
         .stat-card i {
             font-size: 35px;
-            color: #667eea;
+            color: #2c7da0;
             margin-bottom: 10px;
         }
 
@@ -226,21 +219,24 @@ $user = mysqli_fetch_assoc($result);
             gap: 10px;
         }
 
+        /* ========== BUTTONS - COLOR #2c7da0 ========== */
         .btn-primary {
-            background: #667eea;
+            background: #2c7da0;
             border: none;
             padding: 8px 20px;
             border-radius: 25px;
             color: white;
             cursor: pointer;
             font-size: 0.8rem;
-            transition: 0.2s;
+            text-decoration: none;
+            display: inline-block;
         }
-
         .btn-primary:hover {
-            background: #5a67d8;
-            transform: translateY(-2px);
+            background: #1f5a7a;
+            color: white;
+            text-decoration: none;
         }
+        .btn-primary i { margin-right: 6px; }
 
         /* ========== TABLE STYLES ========== */
         table {
@@ -297,6 +293,7 @@ $user = mysqli_fetch_assoc($result);
             border: 1px solid #ddd;
             border-radius: 25px;
             outline: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         .filter-tabs {
@@ -313,11 +310,10 @@ $user = mysqli_fetch_assoc($result);
             border-radius: 20px;
             cursor: pointer;
             font-size: 13px;
-            transition: 0.2s;
         }
 
         .filter-btn.active {
-            background: #667eea;
+            background: #2c7da0;
             color: white;
         }
 
@@ -381,17 +377,18 @@ $user = mysqli_fetch_assoc($result);
             border-radius: 12px;
             border: 1px solid #cbdbe6;
             outline: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
 
         input:focus, textarea:focus, select:focus {
-            border-color: #667eea;
+            border-color: #2c7da0;
         }
 
         .evidence-box {
             background: #f8fafc;
             border-radius: 12px;
             padding: 10px;
-            border: 1px dashed #667eea;
+            border: 1px dashed #2c7da0;
         }
 
         @media (max-width: 768px) {
@@ -433,6 +430,9 @@ $user = mysqli_fetch_assoc($result);
             </a>
             <a href="lec_timetable.php" class="nav-item">
                 <i class="fas fa-calendar-alt"></i><span>Exam Timetable</span>
+            </a>
+            <a href="lec_edit-photo.php" class="nav-item">
+                <i class="fas fa-camera"></i><span>Edit Photo</span>
             </a>
             <div class="logout-item">
                 <a href="logout.php" class="nav-item" id="logoutBtn">
@@ -501,7 +501,7 @@ $user = mysqli_fetch_assoc($result);
                         <tr><th>ID</th><th>Student Name</th><th>Reg No</th><th>Course</th><th>Type</th><th>Current</th><th>Expected</th><th>Evidence</th><th>Status</th><th>Action</th></tr>
                     </thead>
                     <tbody id="appealsBody">
-                        <tr><td colspan="10" style="text-align:center;">Loading...</td><ei
+                        <tr><td colspan="10" style="text-align:center;">Loading...</td></tr>
                     </tbody>
                 </table>
             </div>

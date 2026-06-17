@@ -110,14 +110,14 @@ if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
         .photo-circle-preview img { width: 100%; height: 100%; object-fit: cover; }
         .photo-circle-preview i { font-size: 60px; color: #cbd5e1; }
         .upload-card { background: #f8fafc; border-radius: 20px; padding: 25px; margin-bottom: 25px; border: 1px dashed #cbd5e1; text-align: center; }
-        .upload-icon { font-size: 48px; color: #e74c3c; margin-bottom: 15px; }
+        .upload-icon { font-size: 48px; color: #2c7da0; margin-bottom: 15px; }
         .upload-requirements { font-size: 0.75rem; color: #7f8c8d; margin-bottom: 20px; }
         .file-input-area { margin-bottom: 10px; }
-        .custom-file-label { background: #e74c3c; color: white; padding: 10px 24px; border-radius: 30px; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease; }
-        .custom-file-label:hover { background: #c0392b; transform: translateY(-2px); }
-        .selected-file-name { font-size: 0.75rem; color: #e74c3c; margin-top: 10px; }
-        .save-photo-btn { width: 100%; background: linear-gradient(135deg, #e74c3c, #c0392b); border: none; padding: 14px; border-radius: 40px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 10px; }
-        .save-photo-btn:hover { background: linear-gradient(135deg, #c0392b, #a93226); transform: translateY(-2px); }
+        .custom-file-label { background: #2c7da0; color: white; padding: 10px 24px; border-radius: 30px; font-size: 0.85rem; font-weight: 500; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: all 0.3s ease; }
+        .custom-file-label:hover { background: #2c7da0 transform: translateY(-2px); }
+        .selected-file-name { font-size: 0.75rem; color:#2c7da0; margin-top: 10px; }
+        .save-photo-btn { width: 100%; background: linear-gradient(135deg, #2c7da0,#2c7da0); border: none; padding: 14px; border-radius: 40px; color: white; font-size: 1rem; font-weight: 600; cursor: pointer; transition: all 0.3s ease; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .save-photo-btn:hover { background: linear-gradient(135deg,#2c7da0, #a93226); transform: translateY(-2px); }
         .message { padding: 12px 16px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
         .message-success { background: #d9f0e5; color: #1d6f42; border-left: 4px solid #1d6f42; }
         .message-error { background: #fde8e8; color: #c0392b; border-left: 4px solid #c0392b; }

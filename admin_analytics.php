@@ -132,8 +132,8 @@ $resolution_rate = ($total_tickets > 0) ? round(($total_resolved / $total_ticket
         .page-title { font-size: 1.6rem; color: #0a2b38; }
         .date-badge { background: white; padding: 6px 16px; border-radius: 30px; font-size: 0.75rem; }
         .stats-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 20px; margin-bottom: 25px; }
-        .stat-card { background: white; border-radius: 20px; padding: 18px; border-left: 4px solid #e74c3c; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
-        .stat-number { font-size: 1.8rem; font-weight: 800; color: #c0392b; margin-top: 5px; }
+        .stat-card { background: white; border-radius: 20px; padding: 18px; border-left: 4px solid #2c7da0; box-shadow: 0 2px 8px rgba(0,0,0,0.04); }
+        .stat-number { font-size: 1.8rem; font-weight: 800; color:#2c7da0; margin-top: 5px; }
         .widget-card { background: white; border-radius: 20px; padding: 20px; margin-bottom: 20px; border: 1px solid #e2edf2; }
         .chart-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: 20px; margin-bottom: 20px; }
         canvas { max-height: 300px; width: 100%; }

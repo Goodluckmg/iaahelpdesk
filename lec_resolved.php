@@ -38,10 +38,10 @@ $user = mysqli_fetch_assoc($result);
             background: #f5f7fa;
         }
 
-        /* ========== SIDEBAR STYLES ========== */
+        /* ========== SIDEBAR - STATIC ========== */
         .sidebar {
             width: 280px;
-            background: linear-gradient(180deg, #0a2b38 0%, #0d3b4c 100%);
+            background: #0a2b38; /* RANGI MOJA - HAKUNA GRADIENT */
             color: #e0edf5;
             display: flex;
             flex-direction: column;
@@ -67,7 +67,7 @@ $user = mysqli_fetch_assoc($result);
             display: flex;
             align-items: center;
             justify-content: center;
-            background: linear-gradient(135deg, #667eea, #764ba2);
+            background: #2c7da0; /* RANGI MOJA - HAKUNA GRADIENT */
         }
 
         .avatar i {
@@ -89,7 +89,7 @@ $user = mysqli_fetch_assoc($result);
 
         .user-role {
             font-size: 0.7rem;
-            background: #667eea;
+            background: #2c7da0;
             display: inline-block;
             padding: 3px 12px;
             border-radius: 20px;
@@ -115,23 +115,21 @@ $user = mysqli_fetch_assoc($result);
             color: #cbdbe6;
             text-decoration: none;
             margin-bottom: 5px;
-            transition: 0.2s;
             cursor: pointer;
         }
-
-        .nav-item:hover {
-            background: rgba(255,255,255,0.1);
-            color: white;
-        }
+        /* HAKUNA HOVER EFFECTS - zimeondolewa */
 
         .nav-item.active {
-            background: #667eea;
+            background: #2c7da0;
             color: white;
         }
 
         .nav-item i {
             width: 20px;
         }
+        .nav-item.active i { color: white; }
+        .nav-item i { color: #cbdbe6; }
+        .nav-item.active i { color: white; }
 
         .logout-item {
             margin-top: auto;
@@ -187,21 +185,24 @@ $user = mysqli_fetch_assoc($result);
             gap: 10px;
         }
 
+        /* ========== BUTTONS - COLOR #2c7da0 ========== */
         .btn-primary {
-            background: #667eea;
+            background: #2c7da0;
             border: none;
             padding: 8px 20px;
             border-radius: 25px;
             color: white;
             cursor: pointer;
             font-size: 0.8rem;
-            transition: 0.2s;
+            text-decoration: none;
+            display: inline-block;
         }
-
         .btn-primary:hover {
-            background: #5a67d8;
-            transform: translateY(-2px);
+            background: #1f5a7a;
+            color: white;
+            text-decoration: none;
         }
+        .btn-primary i { margin-right: 6px; }
 
         /* ========== TABLE STYLES ========== */
         table {
@@ -258,7 +259,9 @@ $user = mysqli_fetch_assoc($result);
             border: 1px solid #ddd;
             border-radius: 25px;
             outline: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+        .search-box input:focus { border-color: #2c7da0; }
 
         /* ========== MODAL STYLES ========== */
         .modal {
@@ -320,13 +323,15 @@ $user = mysqli_fetch_assoc($result);
             border-radius: 12px;
             border: 1px solid #cbdbe6;
             outline: none;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
+        input:focus, textarea:focus, select:focus { border-color: #2c7da0; }
 
         .evidence-box {
             background: #f8fafc;
             border-radius: 12px;
             padding: 10px;
-            border: 1px dashed #667eea;
+            border: 1px dashed #2c7da0;
         }
 
         @media (max-width: 768px) {
@@ -366,6 +371,9 @@ $user = mysqli_fetch_assoc($result);
             <a href="lec_timetable.php" class="nav-item">
                 <i class="fas fa-calendar-alt"></i><span>Exam Timetable</span>
             </a>
+            <a href="lec_edit-photo.php" class="nav-item">
+                <i class="fas fa-camera"></i><span>Edit Photo</span>
+            </a>
             <div class="logout-item">
                 <a href="logout.php" class="nav-item" id="logoutBtn">
                     <i class="fas fa-sign-out-alt"></i><span>Logout</span>
@@ -386,7 +394,7 @@ $user = mysqli_fetch_assoc($result);
             <div class="search-box">
                 <input type="text" id="searchInput" placeholder="🔍 Search by student name, reg no...">
                 <button class="btn-primary" id="searchBtn"><i class="fas fa-search"></i> Search</button>
-                <button class="btn-primary" id="refreshBtn" style="background:#27ae60;"><i class="fas fa-sync-alt"></i> Refresh</button>
+                <button class="btn-primary" id="refreshBtn" style="background:#2c7da0;"><i class="fas fa-sync-alt"></i> Refresh</button>
             </div>
         </div>
 
