@@ -9,7 +9,7 @@ if (!isset($_SESSION['logged_in']) || $_SESSION['logged_in'] !== true) {
 
 // Check admin role
 if (!in_array($_SESSION['role'], ['super_admin', 'admin'])) {
-    header("Location: student/student_index.php");
+    header("Location: student_index.php");
     exit();
 }
 
