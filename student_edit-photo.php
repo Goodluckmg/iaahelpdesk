@@ -263,18 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['profile_photo'])) {
                 <div class="user-fullname"><?php echo htmlspecialchars($fullname); ?></div>
                 <div class="user-reg-number"><?php echo htmlspecialchars($reg_no); ?></div>
             </div>
-
-            <div class="photo-preview-card">
-                <span class="photo-preview-label">Current Profile Photo</span>
-                <div class="photo-circle-preview">
-                    <?php if ($current_photo): ?>
-                        <img src="data:image/jpeg;base64,<?php echo $current_photo; ?>" alt="Current Photo" id="previewImage">
-                    <?php else: ?>
-                        <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='150' height='150'%3E%3Crect width='150' height='150' fill='%23e2edf2'/%3E%3Ctext x='75' y='85' font-size='14' text-anchor='middle' fill='%237f8c8d' font-family='sans-serif'%3ENo Photo%3C/text%3E%3C/svg%3E" alt="No Photo" id="previewImage">
-                    <?php endif; ?>
-                </div>
-            </div>
-
+ 
             <form method="POST" action="" enctype="multipart/form-data">
                 <div class="upload-card">
                     <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>

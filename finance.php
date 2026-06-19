@@ -76,32 +76,43 @@ $active_page = 'dashboard';
     <style>
         /* =========================================
            FINANCE DASHBOARD STYLES - TULI KABISA
-           RANGI ZA MFUMO MZIMA
+           RANGI: #0a1c2a (sidebar), #2c7da0 (highlights)
            ========================================= */
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background: #f0f4f9; /* Rangi ya mfumo mzima */
+            background: #f0f4f9;
             min-height: 100vh;
         }
         .dashboard-container {
             display: flex;
             min-height: 100vh;
         }
-        /* SIDEBAR STYLES - ZIMEHAMISHIWA KWENYE sidebar.php */
-        /* Lakini kwa kuwa bado hatujaweka include, nitaweka hapa chini */
+
+        /* ===== SIDEBAR ===== */
         .sidebar {
             width: 260px;
-            background:  #0a1c2a;
+            background: #0a1c2a; /* Rangi yako */
             color: white;
             padding: 20px;
             min-height: 100vh;
             flex-shrink: 0;
         }
-        .profile-area { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: rgba(255,255,255,0.1); }
+        .profile-area {
+            text-align: center;
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid rgba(255,255,255,0.1); /* Mstari wa kusambaratisha */
+        }
         .avatar {
-            width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 12px;
-            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            width: 70px;
+            height: 70px;
+            border-radius: 50%;
+            margin: 0 auto 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
             background: #1a3f60;
         }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
@@ -110,18 +121,36 @@ $active_page = 'dashboard';
         .user-name { font-weight: bold; margin: 5px 0; }
         .user-role { font-size: 0.7rem; opacity: 0.7; }
         .user-id { font-size: 0.65rem; opacity: 0.6; }
-        .nav-menu { display: flex; flex-direction: column; gap: 5px; }
-        .nav-item {
-            color: white; text-decoration: none; padding: 12px 15px; border-radius: 8px;
-            display: flex; align-items: center; gap: 12px;
+
+        .nav-menu {
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
         }
-        .nav-item.active { background: #2c7da0; }
+        .nav-item {
+            color: white;
+            text-decoration: none;
+            padding: 12px 15px;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+        .nav-item.active {
+            background: #2c7da0; /* Rangi yako ya active */
+        }
         /* HAKUNA HOVER EFFECT */
-        .nav-item:hover { background: transparent; }
-        .logout-item { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
+        .nav-item:hover {
+            background: transparent;
+        }
+        .logout-item {
+            margin-top: 30px;
+            border-top: 1px solid rgba(255,255,255,0.1);
+            padding-top: 15px;
+        }
         .nav-label { font-size: 0.9rem; }
 
-        /* MAIN CONTENT */
+        /* ===== MAIN CONTENT ===== */
         .main-content {
             flex: 1;
             padding: 20px;
@@ -136,16 +165,19 @@ $active_page = 'dashboard';
         }
         .page-title {
             font-size: 1.5rem;
-            color: #0b2b4a;
+            color: #0a1c2a;
             margin: 0;
         }
         .date-badge {
             background: white;
             padding: 8px 16px;
             border-radius: 20px;
-            box-shadow: 0 1px 3px #2c7da0;
+            box-shadow: 0 1px 3px rgba(44, 125, 160, 0.3);
             font-size: 0.85rem;
+            color: #0a1c2a;
         }
+
+        /* ===== STATS CARDS ===== */
         .stats-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -156,29 +188,31 @@ $active_page = 'dashboard';
             background: white;
             padding: 20px;
             border-radius: 12px;
-            box-shadow: 0 1px 3px #2c7da0;
+            box-shadow: 0 1px 3px rgba(44, 125, 160, 0.25);
             text-align: center;
         }
         .stat-card i {
             font-size: 2rem;
-            color: #1a5e9c;
+            color: #2c7da0;
             margin-bottom: 10px;
         }
         .stat-number {
             font-size: 1.8rem;
             font-weight: bold;
-            color: #2c7da0;
+            color: #2c7da0; /* Rangi yako */
         }
         .stat-card div:last-child {
-            color: #2c7da0;
+            color: #64748b;
             font-size: 0.85rem;
         }
+
+        /* ===== WIDGET CARDS ===== */
         .widget-card {
             background: white;
             border-radius: 12px;
             padding: 20px;
             margin-bottom: 25px;
-            box-shadow: 0 1px 3px #2c7da0; */
+            box-shadow: 0 1px 3px rgba(44, 125, 160, 0.25);
         }
         .flex-between {
             display: flex;
@@ -188,7 +222,11 @@ $active_page = 'dashboard';
             flex-wrap: wrap;
             gap: 10px;
         }
-        .flex-between strong { color: #2c7da0; }
+        .flex-between strong {
+            color: #0a1c2a;
+        }
+
+        /* ===== BUTTONS ===== */
         .btn-primary {
             background: #2c7da0;
             color: white;
@@ -202,7 +240,11 @@ $active_page = 'dashboard';
             font-size: 0.8rem;
         }
         /* HAKUNA HOVER - button haibadiliki */
-        .btn-primary:hover { background: #0b2b4a; }
+        .btn-primary:hover {
+            background: #2c7da0;
+        }
+
+        /* ===== TABLE ===== */
         table {
             width: 100%;
             border-collapse: collapse;
@@ -216,30 +258,49 @@ $active_page = 'dashboard';
         th {
             background: #f8fafc;
             font-weight: 600;
-            color: #2c7da0
+            color: #2c7da0; /* Rangi yako */
         }
+
+        /* ===== STATUS BADGES ===== */
         .status-badge {
             padding: 3px 10px;
             border-radius: 20px;
             font-size: 0.7rem;
             font-weight: bold;
         }
-        .status-pending, .status-open { background: #fff3e0; color: #e67e22; }
-        .status-in_progress { background: #e3f2fd; color: #1a5e9c; }
-        .status-resolved { background: #d9f0e5; color: #1d6f42; }
+        .status-pending, .status-open {
+            background: #fff3e0;
+            color: #e67e22;
+        }
+        .status-in_progress {
+            background: #e3f2fd;
+            color: #1a5e9c;
+        }
+        .status-resolved {
+            background: #d9f0e5;
+            color: #1d6f42;
+        }
+
+        /* ===== CHART ===== */
         canvas {
             max-height: 250px;
             width: 100% !important;
         }
+
+        /* ===== RESPONSIVE ===== */
         @media (max-width: 768px) {
-            .sidebar { width: 80px; }
-            .nav-label, .welcome-text, .user-name, .user-role, .user-id { display: none; }
+            .sidebar {
+                width: 80px;
+            }
+            .nav-label, .welcome-text, .user-name, .user-role, .user-id {
+                display: none;
+            }
         }
     </style>
 </head>
 <body>
 <div class="dashboard-container">
-    <!-- SIDEBAR - BADO IMO KWENYE FILE, LAKINI UNAWEZA KUICHAINJA KUWA INCLUDE -->
+    <!-- SIDEBAR -->
     <aside class="sidebar">
         <div class="profile-area">
             <div class="avatar">
@@ -386,7 +447,7 @@ $active_page = 'dashboard';
             <div class="widget-card">
                 <strong><i class="fas fa-bolt"></i> Quick Actions</strong>
                 <div style="margin-top: 15px; display: flex; flex-direction: column; gap: 10px;">
-                    <a href="fin_queries.php?filter=pending" class="btn-primary" style="background:#1a5e9c; justify-content:center;">
+                    <a href="fin_queries.php?filter=pending" class="btn-primary" style="background:#2c7da0; justify-content:center;">
                         <i class="fas fa-clock"></i> View Pending Queries
                     </a>
                     <a href="fin_students.php" class="btn-primary" style="background:#1d6f42; justify-content:center;">
@@ -451,8 +512,8 @@ $active_page = 'dashboard';
                     {
                         label: 'Queries Received',
                         data: trendData.totals,
-                        borderColor: '#1a5e9c',
-                        backgroundColor: 'rgba(26, 94, 156, 0.1)',
+                        borderColor: '#2c7da0',
+                        backgroundColor: 'rgba(44, 125, 160, 0.1)',
                         fill: true,
                         tension: 0.3
                     },
