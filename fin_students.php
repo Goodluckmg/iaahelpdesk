@@ -19,28 +19,50 @@ $officer_id = $_SESSION['student_id'] ?? 0;
 $fullname = $_SESSION['fullname'] ?? 'Finance Officer';
 $reg_no = $_SESSION['reg_no'] ?? 'FIN/2024/001';
 
-// Get profile photo
-$photo_query = "SELECT profile_photo FROM students WHERE id = $officer_id";
-$photo_result = mysqli_query($conn, $photo_query);
+// Get profile photo with prepared statement
+$photo_query = "SELECT profile_photo FROM students WHERE id = ?";
+$stmt = mysqli_prepare($conn, $photo_query);
+mysqli_stmt_bind_param($stmt, "i", $officer_id);
+mysqli_stmt_execute($stmt);
+$photo_result = mysqli_stmt_get_result($stmt);
 $student_data = mysqli_fetch_assoc($photo_result);
 $current_photo = $student_data['profile_photo'] ?? null;
+mysqli_stmt_close($stmt);
 
-// Handle verification
+// Handle verification with prepared statement
+$success_message = '';
+$error_message = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['verify_payment'])) {
-    $ticket_id = mysqli_real_escape_string($conn, $_POST['ticket_id']);
+    $ticket_id = intval($_POST['ticket_id']);
     $amount = mysqli_real_escape_string($conn, $_POST['amount']);
     $transaction_ref = mysqli_real_escape_string($conn, $_POST['transaction_ref']);
     $notes = mysqli_real_escape_string($conn, $_POST['notes']);
     
-    $update_query = "UPDATE tickets SET status = 'resolved', 
-                     response = CONCAT(IFNULL(response, ''), '\n\nPayment Verified: Amount $amount, Ref: $transaction_ref, Notes: $notes')
-                     WHERE id = '$ticket_id'";
-    mysqli_query($conn, $update_query);
-    
-    $success_message = "Payment verified successfully!";
+    // Check if ticket exists
+    $check_query = "SELECT id FROM tickets WHERE id = ?";
+    $stmt = mysqli_prepare($conn, $check_query);
+    mysqli_stmt_bind_param($stmt, "i", $ticket_id);
+    mysqli_stmt_execute($stmt);
+    $check_result = mysqli_stmt_get_result($stmt);
+    if (mysqli_num_rows($check_result) == 0) {
+        $error_message = "Invalid ticket ID.";
+    } else {
+        // Update ticket
+        $update_query = "UPDATE tickets SET status = 'resolved', 
+                         response = CONCAT(IFNULL(response, ''), '\n\nPayment Verified: Amount $amount, Ref: $transaction_ref, Notes: $notes')
+                         WHERE id = ?";
+        $stmt = mysqli_prepare($conn, $update_query);
+        mysqli_stmt_bind_param($stmt, "i", $ticket_id);
+        if (mysqli_stmt_execute($stmt)) {
+            $success_message = "Payment verified successfully!";
+        } else {
+            $error_message = "Database error: " . mysqli_error($conn);
+        }
+        mysqli_stmt_close($stmt);
+    }
 }
 
-// Get pending payment queries
+// Get pending payment queries - using prepared statement for filter
 $query = "SELECT t.*, s.fullname as student_name, s.reg_no as student_reg 
           FROM tickets t
           JOIN students s ON t.user_id = s.id
@@ -49,8 +71,9 @@ $query = "SELECT t.*, s.fullname as student_name, s.reg_no as student_reg
           AND t.status != 'resolved'
           ORDER BY t.created_at DESC";
 $result = mysqli_query($conn, $query);
-?>
 
+$active_page = 'verification';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,27 +82,29 @@ $result = mysqli_query($conn, $query);
     <title>IAA Helpdesk | Student Verification</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* =========================================
+           FINANCE VERIFICATION STYLES - TULI KABISA
+           ========================================= */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f9;
+            min-height: 100vh;
+        }
         .dashboard-container { display: flex; min-height: 100vh; }
         .sidebar {
             width: 260px;
-            background: linear-gradient(180deg, #0a2b38, #0d3b4c);
+            background: #0a1c2a;
             color: white;
             padding: 20px;
             min-height: 100vh;
+            flex-shrink: 0;
         }
         .profile-area { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .avatar {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            margin: 0 auto 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            background: linear-gradient(135deg, #2c7da0, #1f5068);
+            width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 12px;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            background: #1a3f60;
         }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .avatar i { font-size: 35px; color: white; }
@@ -89,27 +114,24 @@ $result = mysqli_query($conn, $query);
         .user-id { font-size: 0.65rem; opacity: 0.6; }
         .nav-menu { display: flex; flex-direction: column; gap: 5px; }
         .nav-item {
-            color: white;
-            text-decoration: none;
-            padding: 12px 15px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: background 0.2s;
+            color: white; text-decoration: none; padding: 12px 15px; border-radius: 8px;
+            display: flex; align-items: center; gap: 12px;
         }
-        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); }
+        .nav-item.active { background: #2c7da0; }
+        .nav-item:hover { background: transparent; }
         .logout-item { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
         .nav-label { font-size: 0.9rem; }
+
         .main-content { flex: 1; padding: 20px; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
-        .page-title { font-size: 1.5rem; color: #2c3e50; }
-        .date-badge { background: white; padding: 8px 16px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 0.85rem; }
-        .widget-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .page-title { font-size: 1.5rem; color: #0b2b4a; }
+        .date-badge { background: white; padding: 8px 16px; border-radius: 20px; box-shadow: #2c7da0; font-size: 0.85rem; }
+        .widget-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 1px 3px #2c7da0; }
         .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .flex-between strong { color: #2c7da0; }
         .student-card {
             background: #f9fdfe;
-            border-left: 3px solid #f39c12;
+            border-left: 3px solid #1a5e9c;
             border-radius: 10px;
             padding: 15px;
             margin-bottom: 12px;
@@ -119,35 +141,24 @@ $result = mysqli_query($conn, $query);
             flex-wrap: wrap;
             gap: 10px;
         }
-        .student-info h4 { margin-bottom: 5px; color: #0a2b38; }
-        .student-info p { font-size: 0.75rem; color: #7f8c8d; }
+        .student-info h4 { margin-bottom: 5px; color:#2c7da0; }
+        .student-info p { font-size: 0.75rem; color: #64748b; }
         .status-badge { padding: 3px 10px; border-radius: 20px; font-size: 0.7rem; font-weight: bold; }
         .status-pending { background: #fff3e0; color: #e67e22; }
         .status-resolved { background: #d9f0e5; color: #1d6f42; }
         .btn-primary {
-            background: #f39c12;
-            color: white;
-            border: none;
-            padding: 8px 16px;
-            border-radius: 20px;
-            cursor: pointer;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            font-size: 0.8rem;
+            background: #0b2b4a; color: white; border: none; padding: 8px 16px; border-radius: 20px;
+            text-decoration: none; display: inline-flex; align-items: center; gap: 8px; font-size: 0.8rem;
         }
-        .btn-primary:hover { background: #e67e22; }
-        .btn-verify { background: #27ae60; color: white; border: none; padding: 6px 16px; border-radius: 20px; cursor: pointer; font-size: 0.7rem; }
-        .btn-verify:hover { background: #1e8449; }
+        .btn-primary:hover { background: #0b2b4a; }
+        .btn-verify { background: #1d6f42; }
+        .btn-verify:hover { background: #1d6f42; }
         .search-input { padding: 8px 15px; border: 1px solid #ddd; border-radius: 20px; width: 250px; }
         .modal {
             display: none;
             position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
             background: rgba(0,0,0,0.5);
             z-index: 1000;
             align-items: center;
@@ -161,12 +172,13 @@ $result = mysqli_query($conn, $query);
         }
         .modal-header { padding: 15px 20px; border-bottom: 1px solid #e2edf2; display: flex; justify-content: space-between; align-items: center; }
         .modal-body { padding: 20px; }
-        .close-modal { cursor: pointer; font-size: 1.5rem; }
+        .close-modal { cursor: default; font-size: 1.5rem; }
         .form-group { margin-bottom: 15px; }
         .form-group label { display: block; margin-bottom: 5px; font-weight: 500; }
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 8px 12px; border: 1px solid #ddd; border-radius: 8px; }
         .message { padding: 10px 14px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
         .message-success { background: #d9f0e5; color: #1d6f42; }
+        .message-error { background: #fde8e8; color: #c0392b; }
         @media (max-width: 768px) {
             .sidebar { width: 80px; }
             .nav-label, .welcome-text, .user-name, .user-role, .user-id { display: none; }
@@ -205,8 +217,11 @@ $result = mysqli_query($conn, $query);
             <div class="date-badge"><i class="far fa-calendar-alt"></i> <span id="currentDate"></span></div>
         </div>
 
-        <?php if(isset($success_message)): ?>
+        <?php if($success_message): ?>
             <div class="message message-success"><i class="fas fa-check-circle"></i> <?php echo $success_message; ?></div>
+        <?php endif; ?>
+        <?php if($error_message): ?>
+            <div class="message message-error"><i class="fas fa-exclamation-circle"></i> <?php echo $error_message; ?></div>
         <?php endif; ?>
 
         <div class="widget-card">
@@ -218,7 +233,7 @@ $result = mysqli_query($conn, $query);
             </div>
             <div id="studentsList">
                 <?php if(mysqli_num_rows($result) == 0): ?>
-                    <div style="text-align:center; padding:40px; color:#7f8c8d;">No pending verifications</div>
+                    <div style="text-align:center; padding:40px; color:#94a3b8;">No pending verifications</div>
                 <?php else: ?>
                     <?php while($row = mysqli_fetch_assoc($result)): ?>
                         <div class="student-card">
@@ -252,9 +267,9 @@ $result = mysqli_query($conn, $query);
     <div class="modal-content">
         <div class="modal-header">
             <h3><i class="fas fa-check-circle"></i> Verify Student Payment</h3>
-            <span class="close-modal">&times;</span>
+            <span class="close-modal" id="closeModalBtn">&times;</span>
         </div>
-        <form method="POST" class="modal-body">
+        <form method="POST" class="modal-body" id="verifyForm">
             <div class="form-group">
                 <label>Student Name</label>
                 <input type="text" id="verifyStudentName" readonly style="background:#f5f5f5;">
@@ -265,21 +280,21 @@ $result = mysqli_query($conn, $query);
             </div>
             <div class="form-group">
                 <label>Payment Amount (TSh)</label>
-                <input type="number" id="verifyAmount" placeholder="Enter amount paid" required>
+                <input type="number" name="amount" id="verifyAmount" placeholder="Enter amount paid" required>
             </div>
             <div class="form-group">
                 <label>Transaction Reference</label>
-                <input type="text" id="verifyTransaction" placeholder="Enter transaction reference" required>
+                <input type="text" name="transaction_ref" id="verifyTransaction" placeholder="Enter transaction reference" required>
             </div>
             <div class="form-group">
                 <label>Verification Notes</label>
-                <textarea id="verifyNotes" rows="3" placeholder="Add verification notes..."></textarea>
+                <textarea name="notes" id="verifyNotes" rows="3" placeholder="Add verification notes..."></textarea>
             </div>
             <input type="hidden" name="ticket_id" id="verifyTicketId">
             <input type="hidden" name="verify_payment" value="1">
             <div style="display:flex; gap:10px;">
                 <button type="button" class="btn-primary" id="cancelVerifyBtn" style="background:#7f8c8d;">Cancel</button>
-                <button type="submit" class="btn-primary">Confirm & Verify</button>
+                <button type="submit" class="btn-primary" style="background:#1d6f42;">Confirm & Verify</button>
             </div>
         </form>
     </div>
@@ -294,8 +309,8 @@ $result = mysqli_query($conn, $query);
     setCurrentDate();
 
     const modal = document.getElementById('verifyModal');
-    const closeModal = document.querySelector('.close-modal');
-    const cancelBtn = document.getElementById('cancelVerifyBtn');
+    const closeModalBtn = document.getElementById('closeModalBtn');
+    const cancelVerifyBtn = document.getElementById('cancelVerifyBtn');
 
     document.querySelectorAll('.verify-btn').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -313,12 +328,9 @@ $result = mysqli_query($conn, $query);
         document.getElementById('verifyNotes').value = '';
     }
 
-    closeModal?.addEventListener('click', closeModalFunc);
-    cancelBtn?.addEventListener('click', closeModalFunc);
-    
-    window.addEventListener('click', (e) => {
-        if (e.target === modal) closeModalFunc();
-    });
+    if (closeModalBtn) closeModalBtn.addEventListener('click', closeModalFunc);
+    if (cancelVerifyBtn) cancelVerifyBtn.addEventListener('click', closeModalFunc);
+    window.addEventListener('click', (e) => { if (e.target === modal) closeModalFunc(); });
 
     // Search functionality
     document.getElementById('searchInput')?.addEventListener('keyup', function() {

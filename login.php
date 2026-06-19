@@ -22,7 +22,7 @@ session_start();
 
         body {
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            background:  #0b2b4a;; /* Rangi ya mfumo mzima */
+            background:  #0b2b4a; /* Rangi ya mfumo mzima */
             min-height: 100vh;
             display: flex;
             align-items: center;

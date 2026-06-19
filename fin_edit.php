@@ -19,13 +19,17 @@ $officer_id = $_SESSION['student_id'] ?? 0;
 $fullname = $_SESSION['fullname'] ?? 'Finance Officer';
 $reg_no = $_SESSION['reg_no'] ?? 'FIN/2024/001';
 
-// Get current profile photo
-$photo_query = "SELECT profile_photo FROM students WHERE id = $officer_id";
-$photo_result = mysqli_query($conn, $photo_query);
+// Get current profile photo with prepared statement
+$photo_query = "SELECT profile_photo FROM students WHERE id = ?";
+$stmt = mysqli_prepare($conn, $photo_query);
+mysqli_stmt_bind_param($stmt, "i", $officer_id);
+mysqli_stmt_execute($stmt);
+$photo_result = mysqli_stmt_get_result($stmt);
 $student_data = mysqli_fetch_assoc($photo_result);
 $current_photo = $student_data['profile_photo'] ?? null;
+mysqli_stmt_close($stmt);
 
-// Handle photo upload
+// Handle photo upload with prepared statement
 $message = '';
 $error = '';
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['profile_photo'])) {
@@ -39,18 +43,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['profile_photo'])) {
             $error = "File too large. Max 1MB allowed.";
         } else {
             $image_data = base64_encode(file_get_contents($file['tmp_name']));
-            $update_query = "UPDATE students SET profile_photo = '$image_data' WHERE id = $officer_id";
-            if (mysqli_query($conn, $update_query)) {
+            $update_query = "UPDATE students SET profile_photo = ? WHERE id = ?";
+            $stmt = mysqli_prepare($conn, $update_query);
+            mysqli_stmt_bind_param($stmt, "si", $image_data, $officer_id);
+            if (mysqli_stmt_execute($stmt)) {
                 $message = "Profile photo updated successfully!";
                 $current_photo = $image_data;
             } else {
-                $error = "Error updating photo.";
+                $error = "Error updating photo: " . mysqli_error($conn);
             }
+            mysqli_stmt_close($stmt);
         }
+    } else {
+        $error = "No file selected or upload error.";
     }
 }
-?>
 
+$active_page = 'edit';
+?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -59,27 +69,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['profile_photo'])) {
     <title>IAA Helpdesk | Finance - Edit Profile Photo</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0-beta3/css/all.min.css">
     <style>
+        /* =========================================
+           FINANCE EDIT PHOTO STYLES - TULI KABISA
+           ========================================= */
         * { margin: 0; padding: 0; box-sizing: border-box; }
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #f5f7fa; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #f0f4f9;
+            min-height: 100vh;
+        }
         .dashboard-container { display: flex; min-height: 100vh; }
         .sidebar {
             width: 260px;
-            background: linear-gradient(180deg, #0a2b38, #0d3b4c);
+            background: #0a1c2a;
             color: white;
             padding: 20px;
             min-height: 100vh;
+            flex-shrink: 0;
         }
         .profile-area { text-align: center; margin-bottom: 30px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.1); }
         .avatar {
-            width: 70px;
-            height: 70px;
-            border-radius: 50%;
-            margin: 0 auto 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            background: linear-gradient(135deg, #2c7da0, #1f5068);
+            width: 70px; height: 70px; border-radius: 50%; margin: 0 auto 12px;
+            display: flex; align-items: center; justify-content: center; overflow: hidden;
+            background: #1a3f60;
         }
         .avatar img { width: 100%; height: 100%; object-fit: cover; }
         .avatar i { font-size: 35px; color: white; }
@@ -89,33 +101,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['profile_photo'])) {
         .user-id { font-size: 0.65rem; opacity: 0.6; }
         .nav-menu { display: flex; flex-direction: column; gap: 5px; }
         .nav-item {
-            color: white;
-            text-decoration: none;
-            padding: 12px 15px;
-            border-radius: 8px;
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            transition: background 0.2s;
+            color: white; text-decoration: none; padding: 12px 15px; border-radius: 8px;
+            display: flex; align-items: center; gap: 12px;
         }
-        .nav-item:hover, .nav-item.active { background: rgba(255,255,255,0.1); }
+        .nav-item.active { background:#2c7da0; }
+        .nav-item:hover { background: transparent; }
         .logout-item { margin-top: 30px; border-top: 1px solid rgba(255,255,255,0.1); padding-top: 15px; }
         .nav-label { font-size: 0.9rem; }
+
         .main-content { flex: 1; padding: 20px; }
         .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 25px; flex-wrap: wrap; gap: 15px; }
-        .page-title { font-size: 1.5rem; color: #2c3e50; }
+        .page-title { font-size: 1.5rem; color: #0b2b4a; }
         .date-badge { background: white; padding: 8px 16px; border-radius: 20px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); font-size: 0.85rem; }
         .widget-card { background: white; border-radius: 12px; padding: 20px; margin-bottom: 25px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
         .flex-between { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-wrap: wrap; gap: 10px; }
+        .flex-between strong { color:#2c7da0; }
         .edit-photo-wrapper { max-width: 500px; margin: 0 auto; }
-        .photo-preview-card { text-align: center; margin-bottom: 25px; }
         .photo-circle-preview {
             width: 150px;
             height: 150px;
-            margin: 0 auto;
+            margin: 0 auto 20px;
             border-radius: 50%;
             overflow: hidden;
-            border: 4px solid #f39c12;
+            border: 4px solid #2c7da0;
             background: #f0f0f0;
             display: flex;
             align-items: center;
@@ -124,29 +132,29 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['profile_photo'])) {
         .photo-circle-preview img { width: 100%; height: 100%; object-fit: cover; }
         .photo-circle-preview i { font-size: 60px; color: #cbd5e1; }
         .upload-card { text-align: center; padding: 20px; background: #f8fafc; border-radius: 16px; border: 1px dashed #cbd5e1; }
-        .upload-icon { font-size: 48px; color: #f39c12; margin-bottom: 15px; }
+        .upload-icon { font-size: 48px; color: #2c7da0; margin-bottom: 15px; }
         .custom-file-label {
-            background: #f39c12;
+            background: #2c7da0;
             color: white;
             padding: 10px 24px;
             border-radius: 30px;
-            cursor: pointer;
+            cursor: default;
             display: inline-flex;
             align-items: center;
             gap: 8px;
         }
-        .custom-file-label:hover { background: #e67e22; }
         .save-photo-btn {
             width: 100%;
-            background: linear-gradient(135deg, #f39c12, #e67e22);
+            background: #2c7da0;
             border: none;
             padding: 12px;
             border-radius: 30px;
             color: white;
             font-weight: 600;
-            cursor: pointer;
+            cursor: default;
             margin-top: 20px;
         }
+        .save-photo-btn:hover { background: #0b2b4a; }
         .message { padding: 10px 14px; border-radius: 12px; margin-bottom: 20px; display: flex; align-items: center; gap: 10px; }
         .message-success { background: #d9f0e5; color: #1d6f42; }
         .message-error { background: #fde8e8; color: #c0392b; }
@@ -197,20 +205,24 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['profile_photo'])) {
 
         <div class="widget-card">
             <div class="edit-photo-wrapper">
-                <div class="photo-preview-card">
-                    
+                <div class="photo-circle-preview">
+                    <?php if ($current_photo): ?>
+                        <img src="data:image/jpeg;base64,<?php echo htmlspecialchars($current_photo); ?>" alt="Profile Photo" id="previewImage">
+                    <?php else: ?>
+                        <i class="fas fa-user-circle" id="previewIcon"></i>
+                    <?php endif; ?>
                 </div>
 
                 <form method="POST" enctype="multipart/form-data" class="upload-card">
                     <div class="upload-icon"><i class="fas fa-cloud-upload-alt"></i></div>
-                    <div class="upload-requirements">PNG, JPEG, JPG only (Max 1MB)</div>
+                    <div class="upload-requirements" style="margin-bottom: 15px; color:#64748b; font-size:0.85rem;">PNG, JPEG, JPG only (Max 1MB)</div>
                     <div class="file-input-area">
                         <label class="custom-file-label" id="fileLabel">
                             <i class="fas fa-folder-open"></i> Choose File
                         </label>
                         <input type="file" name="profile_photo" id="photoFile" accept="image/jpeg,image/png,image/jpg" style="display: none;">
                     </div>
-                    <div class="selected-file-name" id="fileNameDisplay" style="margin-top:10px; color:#e67e22;">No file chosen</div>
+                    <div class="selected-file-name" id="fileNameDisplay" style="margin-top:10px; color:#1a5e9c;">No file chosen</div>
                     <button type="submit" class="save-photo-btn"><i class="fas fa-save"></i> Update Photo</button>
                 </form>
             </div>
@@ -230,8 +242,9 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['profile_photo'])) {
     const fileLabel = document.getElementById('fileLabel');
     const fileNameDisplay = document.getElementById('fileNameDisplay');
     const previewImage = document.getElementById('previewImage');
+    const previewIcon = document.getElementById('previewIcon');
 
-    fileLabel?.addEventListener('click', () => fileInput.click());
+    fileLabel?.addEventListener('click', () => fileInput?.click());
 
     fileInput?.addEventListener('change', function(e) {
         const file = e.target.files[0];
@@ -239,7 +252,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_FILES['profile_photo'])) {
             fileNameDisplay.textContent = file.name;
             const reader = new FileReader();
             reader.onload = function(e) {
-                previewImage.src = e.target.result;
+                if (previewImage) {
+                    previewImage.src = e.target.result;
+                    previewImage.style.display = 'block';
+                }
+                if (previewIcon) previewIcon.style.display = 'none';
             };
             reader.readAsDataURL(file);
         } else {
