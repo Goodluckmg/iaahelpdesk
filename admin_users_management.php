@@ -40,20 +40,85 @@ if (isset($_SESSION['profile_photo']) && !empty($_SESSION['profile_photo'])) {
     }
 }
 
-// ========== HANDLE ADD USER VIA AJAX (ADDED program) ==========
+// ========== VALIDATE STUDENT REG NUMBER FORMAT ==========
+function validateStudentRegNumber($reg_no) {
+    // Format: program/0001/2024 (case insensitive)
+    return preg_match('/^[a-zA-Z]+\/\d{4}\/\d{4}$/', $reg_no) === 1;
+}
+
+// ========== VALIDATE STAFF REG NUMBER FORMAT ==========
+function validateStaffRegNumber($reg_no) {
+    // Format: dep/001 au dep/0001 (case insensitive)
+    return preg_match('/^[a-zA-Z]+\/\d{3,4}$/', $reg_no) === 1;
+}
+
+// ========== FORMAT REG NUMBER (UPPERCASE) ==========
+function formatRegNumber($reg_no) {
+    $parts = explode('/', $reg_no);
+    $parts[0] = strtoupper($parts[0]);
+    return implode('/', $parts);
+}
+
+// ========== DISPLAY ROLE NAME ==========
+function getRoleDisplay($role) {
+    $roles = [
+        'student' => 'Student',
+        'admin' => 'Admin',
+        'super_admin' => 'Super Admin',
+        'exam_officer' => 'Exam Officer',
+        'ict' => 'ICT Staff',
+        'finance' => 'Finance Staff',
+    ];
+    return $roles[$role] ?? ucfirst($role);
+}
+
+// ========== HANDLE ADD USER VIA AJAX ==========
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'add_user') {
     $fullname = mysqli_real_escape_string($conn, trim($_POST['fullname']));
-    $reg_no = mysqli_real_escape_string($conn, trim($_POST['reg_no']));
+    $reg_no_raw = trim($_POST['reg_no']);
     $email = mysqli_real_escape_string($conn, trim($_POST['email']));
     $phone = mysqli_real_escape_string($conn, trim($_POST['phone']));
     $program = mysqli_real_escape_string($conn, trim($_POST['program']));
     $role = mysqli_real_escape_string($conn, $_POST['role']);
     $password = password_hash('password123', PASSWORD_DEFAULT);
     
-    // Check if reg_no already exists
-    $check = mysqli_query($conn, "SELECT id FROM students WHERE reg_no = '$reg_no'");
-    if (mysqli_num_rows($check) > 0) {
-        echo json_encode(['success' => false, 'message' => 'Registration number already exists!']);
+    $errors = [];
+    
+    // ========== VALIDATE REG NUMBER FORMAT BASED ON ROLE ==========
+    if ($role == 'student') {
+        if (!validateStudentRegNumber($reg_no_raw)) {
+            $errors[] = 'Invalid registration number format! Use: program/0001/2024 (e.g., odait/0001/2024)';
+        }
+    } else {
+        // Staff: admin, ict, finance, exam_officer
+        if (!validateStaffRegNumber($reg_no_raw)) {
+            $errors[] = 'Invalid registration number format! Use: dep/001 (e.g., admin/001, ict/001)';
+        }
+    }
+    
+    // Format the reg number (convert to UPPERCASE)
+    if (empty($errors)) {
+        $reg_no = formatRegNumber($reg_no_raw);
+    }
+    
+    // ========== CHECK IF USER ALREADY EXISTS ==========
+    if (!empty($reg_no)) {
+        // Check if reg_no already exists (case insensitive)
+        $check_reg = mysqli_query($conn, "SELECT id FROM students WHERE UPPER(reg_no) = UPPER('$reg_no')");
+        if (mysqli_num_rows($check_reg) > 0) {
+            $errors[] = 'Registration number already exists!';
+        }
+    }
+    
+    // Check if email already exists
+    $check_email = mysqli_query($conn, "SELECT id FROM students WHERE email = '$email'");
+    if (mysqli_num_rows($check_email) > 0) {
+        $errors[] = 'Email already registered!';
+    }
+    
+    // If there are errors, return them
+    if (!empty($errors)) {
+        echo json_encode(['success' => false, 'message' => implode(' ', $errors)]);
         exit();
     }
     
@@ -63,17 +128,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $insert = "INSERT INTO students (fullname, reg_no, email, phone, program, password, role, status) 
                VALUES ('$fullname', '$reg_no', '$email', '$phone', $program_value, '$password', '$role', 'active')";
     if (mysqli_query($conn, $insert)) {
-        echo json_encode(['success' => true, 'message' => 'User added successfully! Default password: password123']);
+        echo json_encode(['success' => true, 'message' => 'User added successfully! Reg No: ' . $reg_no . ' | Default password: password123']);
     } else {
         echo json_encode(['success' => false, 'message' => 'Error: ' . mysqli_error($conn)]);
     }
     exit();
 }
 
-// ========== HANDLE DELETE USER - FIXED: Super admin can delete anyone except super_admin ==========
+// ========== HANDLE DELETE USER ==========
+// 🔒 Only Super Admin can delete users
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'delete_user') {
+    // Check if user is super admin
+    if (!$is_super_admin) {
+        echo json_encode(['success' => false, 'message' => 'Unauthorized! Only Super Admin can delete users.']);
+        exit();
+    }
+    
     $user_id = (int)$_POST['user_id'];
-    // Super admin can delete anyone except super_admin themselves
     $delete = "DELETE FROM students WHERE id = $user_id AND role != 'super_admin'";
     if (mysqli_query($conn, $delete)) {
         echo json_encode(['success' => true]);
@@ -83,7 +154,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     exit();
 }
 
-// ========== HANDLE TOGGLE STATUS - FIXED: Can toggle any user ==========
+// ========== HANDLE TOGGLE STATUS ==========
+// 🔓 Both Super Admin and Admin can toggle status
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'toggle_status') {
     $user_id = (int)$_POST['user_id'];
     $current_status = mysqli_real_escape_string($conn, $_POST['current_status']);
@@ -102,7 +174,7 @@ $page = isset($_GET['page']) ? (int)$_GET['page'] : 1;
 $limit = 15;
 $offset = ($page - 1) * $limit;
 
-// Get all users (students) - ADDED program column
+// Get all users (students)
 $users_query = "SELECT id, fullname, reg_no, email, phone, program, role, status, created_at 
                 FROM students 
                 ORDER BY created_at DESC 
@@ -176,6 +248,7 @@ $total_pages = ceil($total_users / $limit);
         @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
         @media (max-width: 768px) { .sidebar { width: 70px; } .sidebar span { display: none; } }
         .badge-program { background: #e8f0f5; padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; display: inline-block; }
+        .format-hint { color: #7f8c8d; font-size: 0.7rem; margin-top: 4px; }
     </style>
 </head>
 <body>
@@ -218,6 +291,9 @@ $total_pages = ceil($total_users / $limit);
                 <strong>📋 Registered Users</strong>
                 <?php if ($is_super_admin): ?>
                     <button class="btn-primary" id="showAddUserBtn"><i class="fas fa-plus"></i> Add New User</button>
+                <?php else: ?>
+                    <!-- Admin wa kawaida pia anaweza ku-add users -->
+                    <button class="btn-primary" id="showAddUserBtn"><i class="fas fa-plus"></i> Add New User</button>
                 <?php endif; ?>
             </div>
             
@@ -234,7 +310,8 @@ $total_pages = ceil($total_users / $limit);
                             <th>Status</th>
                             <th>Registered</th>
                             <th>Actions</th>
-                        </thead>
+                        </tr>
+                    </thead>
                     <tbody id="usersTableBody">
                         <?php while ($user = mysqli_fetch_assoc($users_result)): ?>
                         <tr data-id="<?php echo $user['id']; ?>">
@@ -251,16 +328,21 @@ $total_pages = ceil($total_users / $limit);
                                 <?php endif; ?>
                             </td>
                             <td><?php echo htmlspecialchars($user['email']); ?></td>
-                            <td><?php echo ucfirst(htmlspecialchars($user['role'])); ?></td>
+                            <td><?php echo getRoleDisplay($user['role']); ?></td>
                             <td><span class="status-badge <?php echo $user['status'] == 'active' ? 'status-active' : 'status-inactive'; ?>"><?php echo ucfirst($user['status']); ?></span></td>
                             <td><?php echo date('d/m/Y', strtotime($user['created_at'])); ?></td>
                             <td>
-                                <?php if ($is_super_admin && $user['role'] != 'super_admin'): ?>
+                                <!-- 🔓 Toggle Status - Inaonekana kwa wote (Super Admin na Admin) -->
+                                <?php if (($is_super_admin || $_SESSION['role'] == 'admin') && $user['role'] != 'super_admin'): ?>
                                     <button class="btn-primary btn-sm toggle-status" data-id="<?php echo $user['id']; ?>" data-status="<?php echo $user['status']; ?>"><?php echo $user['status'] == 'active' ? 'Deactivate' : 'Activate'; ?></button>
+                                <?php endif; ?>
+                                
+                                <!-- 🔒 Delete - Inaonekana kwa Super Admin TU -->
+                                <?php if ($is_super_admin && $user['role'] != 'super_admin'): ?>
                                     <button class="btn-danger btn-sm delete-user" data-id="<?php echo $user['id']; ?>">Delete</button>
                                 <?php endif; ?>
                             </td>
-                        <tr>
+                        </tr>
                         <?php endwhile; ?>
                     </tbody>
                 </table>
@@ -277,7 +359,7 @@ $total_pages = ceil($total_users / $limit);
     </main>
 </div>
 
-<!-- ADD USER MODAL (POPUP) - ADDED program field -->
+<!-- ADD USER MODAL - Muundo sahihi -->
 <div id="addUserModal" class="modal">
     <div class="modal-content">
         <div class="modal-header">
@@ -291,8 +373,12 @@ $total_pages = ceil($total_users / $limit);
             </div>
             <div class="form-group">
                 <label>Registration Number <span class="required">*</span></label>
-                <input type="text" name="reg_no" id="reg_no" required placeholder="e.g., IAA/2024/0789">
-                <small style="color:#7f8c8d;">This will be used as username for login</small>
+                <input type="text" name="reg_no" id="reg_no" required placeholder="e.g., odait/0001/2024 or admin/001">
+                <div class="format-hint">
+                    <i class="fas fa-info-circle"></i> 
+                    Student: <strong>program/0001/2024</strong> &nbsp;|&nbsp; 
+                    Staff: <strong>dep/001</strong> (e.g., admin/001, ict/001)
+                </div>
             </div>
             <div class="form-group">
                 <label>Email <span class="required">*</span></label>
@@ -307,10 +393,12 @@ $total_pages = ceil($total_users / $limit);
                 <select name="role" id="role" required>
                     <option value="student">Student</option>
                     <?php if ($is_super_admin): ?>
+                    <option value="exam_officer">Exam Officer</option>
                     <option value="ict">ICT Staff</option>
                     <option value="finance">Finance Staff</option>
                     <option value="admin">Admin</option>
-                    <option value="lecturer">Exam officer</option>
+                    <?php else: ?>
+                    <!-- Admin wa kawaida anaweza ku-add students tu -->
                     <?php endif; ?>
                 </select>
             </div>
@@ -320,20 +408,20 @@ $total_pages = ceil($total_users / $limit);
                 <label>Program / Course <span class="required" id="programRequired">*</span></label>
                 <select name="program" id="program">
                     <option value="">-- Select Program --</option>
-                    <option value="BACHELOR IN COMPUTER SCIENCE">Bachelor in Computer Science</option>
-                    <option value="BACHELOR IN ACCOUNTANCY">Bachelor in Accountancy</option>
-                    <option value="BACHELOR IN BUSINESS ADMINISTRATION">Bachelor in Business Administration</option>
-                    <option value="BACHELOR IN INFORMATION TECHNOLOGY">Bachelor in Information Technology</option>
-                    <option value="DIPLOMA IN COMPUTER SCIENCE">Diploma in Computer Science</option>
-                    <option value="DIPLOMA IN ACCOUNTANCY">Diploma in Accountancy</option>
-                    <option value="CERTIFICATE IN ICT">Certificate in ICT</option>
+                    <option value="BCS">Bachelor in Computer Science</option>
+                    <option value="BA">Bachelor in Accountancy</option>
+                    <option value="BBA">Bachelor in Business Administration</option>
+                    <option value="BIT">Bachelor in Information Technology</option>
+                    <option value="ODIT">Diploma in Computer Science</option>
+                    <option value="ODA">Diploma in Accountancy</option>
+                    <option value="BTCICT">Certificate in ICT</option>
                 </select>
             </div>
             
             <div class="form-group">
                 <label>Default Password</label>
                 <input type="text" value="password123" disabled style="background:#f1f5f9;">
-                <small style="color:#7f8c8d;">User can change password after first login</small>
+            
             </div>
             <div style="display:flex; gap:10px; justify-content:flex-end;">
                 <button type="button" class="btn-primary" id="cancelModalBtn" style="background:#7f8c8d;">Cancel</button>
@@ -416,6 +504,12 @@ $total_pages = ceil($total_users / $limit);
         const formData = new FormData(form);
         formData.append('action', 'add_user');
         
+        // Show loading state
+        const submitBtn = form.querySelector('button[type="submit"]');
+        const originalText = submitBtn.textContent;
+        submitBtn.textContent = 'Adding...';
+        submitBtn.disabled = true;
+        
         try {
             const response = await fetch(window.location.href, {
                 method: 'POST',
@@ -426,16 +520,20 @@ $total_pages = ceil($total_users / $limit);
             if (result.success) {
                 showToast(result.message);
                 closeModal();
-                setTimeout(() => location.reload(), 1500);
+                setTimeout(() => location.reload(), 2000);
             } else {
                 showToast(result.message, true);
+                submitBtn.textContent = originalText;
+                submitBtn.disabled = false;
             }
         } catch (error) {
-            showToast('Error adding user', true);
+            showToast('Error adding user: ' + error.message, true);
+            submitBtn.textContent = originalText;
+            submitBtn.disabled = false;
         }
     });
 
-    // Delete user - FIXED: Now works for ICT and Finance staff too
+    // Delete user - Only Super Admin can delete
     document.querySelectorAll('.delete-user').forEach(btn => {
         btn.addEventListener('click', async () => {
             if (!confirm('Delete this user permanently? This action cannot be undone.')) return;
@@ -445,6 +543,9 @@ $total_pages = ceil($total_users / $limit);
             formData.append('action', 'delete_user');
             formData.append('user_id', userId);
             
+            btn.textContent = '...';
+            btn.disabled = true;
+            
             try {
                 const response = await fetch(window.location.href, { method: 'POST', body: formData });
                 const result = await response.json();
@@ -452,15 +553,19 @@ $total_pages = ceil($total_users / $limit);
                     showToast('User deleted successfully');
                     setTimeout(() => location.reload(), 1000);
                 } else {
-                    showToast('Error deleting user', true);
+                    showToast('Error deleting user: ' + result.message, true);
+                    btn.textContent = 'Delete';
+                    btn.disabled = false;
                 }
             } catch (error) {
                 showToast('Error deleting user', true);
+                btn.textContent = 'Delete';
+                btn.disabled = false;
             }
         });
     });
 
-    // Toggle status - FIXED: Now works for all users
+    // Toggle status - Both Super Admin and Admin can toggle
     document.querySelectorAll('.toggle-status').forEach(btn => {
         btn.addEventListener('click', async () => {
             const userId = btn.dataset.id;
@@ -470,6 +575,9 @@ $total_pages = ceil($total_users / $limit);
             formData.append('user_id', userId);
             formData.append('current_status', currentStatus);
             
+            btn.textContent = '...';
+            btn.disabled = true;
+            
             try {
                 const response = await fetch(window.location.href, { method: 'POST', body: formData });
                 const result = await response.json();
@@ -478,9 +586,13 @@ $total_pages = ceil($total_users / $limit);
                     setTimeout(() => location.reload(), 1000);
                 } else {
                     showToast('Error updating status', true);
+                    btn.textContent = currentStatus === 'active' ? 'Deactivate' : 'Activate';
+                    btn.disabled = false;
                 }
             } catch (error) {
                 showToast('Error updating status', true);
+                btn.textContent = currentStatus === 'active' ? 'Deactivate' : 'Activate';
+                btn.disabled = false;
             }
         });
     });

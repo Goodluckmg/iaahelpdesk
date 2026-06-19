@@ -35,7 +35,7 @@ function redirectToDashboard($role, $user_id, $fullname, $username) {
             $_SESSION['reg_no'] = $username;
             header("Location: student_index.php");
             break;
-        case 'lecturer':
+       
         case 'academic':
             $_SESSION['staff_id'] = $user_id;
             $_SESSION['staff_no'] = $username;
@@ -94,10 +94,8 @@ $student_result = mysqli_query($conn, $student_query);
 if (mysqli_num_rows($student_result) == 1) {
     $user = mysqli_fetch_assoc($student_result);
     
-    // Debug - uncomment to see what's happening
-    // echo "Stored password: " . $user['password'] . "<br>";
-    // echo "MD5 of input: " . md5($password) . "<br>";
-    
+ 
+ 
     if (verifyUserPassword($password, $user['password'])) {
         $role = !empty($user['role']) ? $user['role'] : 'student';
         redirectToDashboard($role, $user['id'], $user['fullname'], $user['reg_no']);
