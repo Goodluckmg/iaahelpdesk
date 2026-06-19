@@ -36,9 +36,10 @@ function redirectToDashboard($role, $user_id, $fullname, $username) {
             header("Location: student_index.php");
             break;
        
-        case 'academic':
+      case 'exam_officer': 
             $_SESSION['staff_id'] = $user_id;
             $_SESSION['staff_no'] = $username;
+            $_SESSION['staff_role'] = 'exam_officer';
             header("Location: lecturers.php");
             break;
         case 'ict':
@@ -85,9 +86,8 @@ if (empty($username) || empty($password)) {
     exit();
 }
 
-// ============================================
+
 // STEP 1: Check in students table
-// ============================================
 $student_query = "SELECT id, reg_no, fullname, email, password, role, status FROM students WHERE (reg_no = '$username' OR email = '$username') AND status = 'active'";
 $student_result = mysqli_query($conn, $student_query);
 
@@ -105,10 +105,9 @@ if (mysqli_num_rows($student_result) == 1) {
         exit();
     }
 }
-
-// ============================================
+ 
 // STEP 2: Check in staff table
-// ============================================
+ 
 $staff_query = "SELECT id, staff_no, fullname, email, password, role, is_active as status FROM staff WHERE (staff_no = '$username' OR email = '$username') AND is_active = 1";
 $staff_result = mysqli_query($conn, $staff_query);
 
@@ -125,9 +124,9 @@ if (mysqli_num_rows($staff_result) == 1) {
     }
 }
 
-// ============================================
+ 
 // STEP 3: Check in admins table (if exists)
-// ============================================
+ 
 $table_check = mysqli_query($conn, "SHOW TABLES LIKE 'admins'");
 if (mysqli_num_rows($table_check) > 0) {
     $admin_query = "SELECT id, username, fullname, password, role, status FROM admins WHERE (username = '$username' OR email = '$username') AND status = 'active'";
@@ -147,9 +146,9 @@ if (mysqli_num_rows($table_check) > 0) {
     }
 }
 
-// ============================================
+ 
 // If no user found
-// ============================================
+ 
 $_SESSION['error'] = "User not found. Please check your registration number, staff ID, or username.";
 header("Location: login.php");
 exit();
